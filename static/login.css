@@ -1,0 +1,148 @@
+body {
+    background-image: url('background.jpg');
+    background-size: 100vw 100vh;
+    background-repeat: no-repeat;
+    font-family: 'Varela Round', sans-serif; /* Font set to Varela Round */
+    color: beige;
+    font-size: 1rem;
+}
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+}
+
+.welcome {
+    font-size: 1.9rem;
+    font-weight: 500;
+}
+
+.center {
+    display: flex;
+    margin-left: 715px;
+    margin-right: auto;
+    width: 80px;
+    height: 80px;
+}
+
+.card {
+    position: relative;
+    box-shadow: 0 0 5px 0;
+    backdrop-filter: blur(10px);
+    height: 300px;
+    text-align: left;
+    font-size: 20px;
+    width: 550px;
+    padding: 30px;
+    margin: auto;
+    margin-top: 100px;
+    margin-left: 625px;
+    border-radius: 0;
+    background: rgba(0, 0, 0.8, 0.1); /* Transparent background */
+    color: beige;
+    /*overflow: hidden; !* Ensures pseudo-elements don't affect layout *!*/
+    transition: transform 0.3s ease; /* Smooth scaling effect on hover */
+    z-index: 0;
+}
+
+.card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+            45deg,
+            #00008B, /* Dark Blue */
+            #9400D3, /* Dark Violet */
+            #FF007F, /* Bright Pink */
+            #FF0000   /* Red */
+    );
+    padding: 10px;
+    background-size: 400%; /* Ensures smooth animation */
+    border-radius: 0; /* Matches the card's border radius */
+    animation: glow 5s infinite; /* Glow animation */
+    opacity: 0; /* Hidden by default */
+    transform: scale(1); /* Slightly larger to simulate a glowing border */
+    transition: opacity 0.3s ease, transform 0.3s ease; /* Smooth hover effect */
+    pointer-events: none; /* Prevent hover interaction with pseudo-element */
+    z-index: -1;
+    overflow: hidden;
+    mask: linear-gradient(#000, #000) content-box, linear-gradient(#fff, #fff);
+    /*-webkit-mask: linear-gradient(#000, #000) content-box, linear-gradient(#fff, #fff);*/
+    mask-composite: exclude; /* Ensures the inner part of the glow is cut out */
+    -webkit-mask-composite: destination-out; /* Safari-specific */
+}
+
+
+
+.card:hover {
+    transform: scale(1.05); /* Scales the card slightly on hover */
+}
+
+.card:hover::before {
+    opacity: 1; /* Show the glowing effect */
+    animation: glow 2s infinite;
+
+    transform: scale(1.04); /* Slightly larger border scale for emphasis */
+}
+
+@keyframes glow {
+    0% {
+        background-position: 0 0;
+    }
+    50% {
+        background-position: 100% 0;
+    }
+    100% {
+        background-position: 0 0;
+    }
+}
+
+.card h1 {
+    font-size: 30px;
+    text-align: center;
+    margin-bottom: 25px;
+}
+.form-group {
+    margin-bottom: 35px; /* Adds more space between form groups */
+    display: flex;
+    align-items: center;
+    gap: 20px; /* Adds space between label and input */
+}
+.form-group label {
+    width: 120px;
+    font-weight: bold;
+}
+.form-group input {
+    flex: 1;
+    padding: 12px;
+    font-size: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 25px; /* Curved borders for inputs */
+    background: rgba(255, 255, 255, 0.2); /* Matches blur effect */
+    color: beige;
+    box-sizing: border-box;
+}
+.form-group input:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.6);
+}
+.btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.2); /* Matches blur effect */
+    color: beige;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 25px; /* Curved borders for the button */
+    font-size: 18px;
+    cursor: pointer;
+    margin-top: 15px;
+}
+.btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+

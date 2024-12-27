@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>CHATDEVS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
+    </style>
+</head>
+<body>
+
+<nav>
+    <p class="welcome">ChatDEVs</p>
+    <img src="{{ url_for('static', filename='logo.png') }}" class="center" />
+</nav>
+
+<div class="card">
+    <h1>LOG IN</h1>
+    <form action="{{ url_for('login') }}" method="POST">
+        <div class="form-group">
+            <label for="username">USERNAME</label>
+            <input type="text" id="username" name="username" placeholder="Enter your username" required>
+        </div>
+        <button type="submit" class="btn">PROCEED</button>
+    </form>
+</div>
+</body>
+</html>
