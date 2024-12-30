@@ -4,160 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
-    <style>
-
-/* General Layout */
-body {
-    background-color: #2f3136;
-    color: white;
-    font-family: Arial, sans-serif;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    margin: 0;
-}
-
-/* Container for the chat */
-.container {
-    display: flex;
-    flex-direction: row;
-    flex-grow: 1;
-}
-
-/* Left Sidebar (Online Users) */
-.left-sidebar {
-    width: 250px;
-    background-color: #36393f;
-    padding: 20px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    height: 100vh;
-    overflow-y: auto;
-}
-
-h2 {
-    text-align: center;
-    color: #7289da;
-    margin: 0;
-}
-
-h3 {
-    color: #7289da;
-    margin: 0;
-    text-align: center;
-}
-
-#user-list {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-    text-align: center;
-}
-
-li {
-    cursor: pointer;
-    padding: 5px;
-    margin: 5px 0;
-    transition: background-color 0.3s;
-}
-
-li:hover {
-    background-color: #4e5156;
-}
-
-.active {
-    background-color: #5a6e98;
-}
-
-/* Right Section for Chat */
-.right-section {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-    background-color: #2f3136;
-    position: relative;
-}
-
-/* Messages Section */
-#messages {
-    background-color: #2f3136;
-    overflow-y: auto;
-    padding: 10px;
-    border-radius: 5px;
-    width: 100%;
-    max-height: 400px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column-reverse;  /* Ensures new messages appear at the bottom */
-    gap: 2px;
-}
-
-/* Message Style */
-.message {
-    padding: 6px;
-    font-size: 14px;
-    line-height: 1.4;
-    max-width: 100%;
-    margin: 0;
-    word-wrap: break-word;
-}
-
-.message.you {
-    color: white;
-    text-align: left;
-}
-
-.message.other {
-    color: #7289da;
-    text-align: left;
-}
-
-/* Pin the input and button to the bottom */
-.input-container {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 10px;
-    display: flex;
-    justify-content: space-between;
-    background-color: #2f3136;
-    z-index: 1;
-}
-
-input[type="text"] {
-    flex-grow: 1;
-    background-color: #40444b;
-    color: white;
-    padding: 10px;
-    border-radius: 5px;
-    border: none;
-    font-size: 14px;
-    box-sizing: border-box;
-    margin-right: 10px;
-}
-
-button {
-    background-color: #7289da;
-    color: white;
-    border: none;
-    padding: 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px;
-    box-sizing: border-box;
-}
-
-button:hover {
-    background-color: #5a6e98;
-}
-
-
-    </style>
+    <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <div class="container">
@@ -172,7 +19,7 @@ button:hover {
 
         <!-- Right Section for Chat -->
         <div class="right-section">
-            <h3>Chat with:</h3>
+            <h3>Chatting with: <span id="selected-user">No one</span></h3>
             <div id="messages">
                 <!-- Messages will be displayed here -->
             </div>
@@ -183,6 +30,7 @@ button:hover {
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
     <script>
         const username = "{{ username }}";
         const socket = io.connect('http://' + document.domain + ':' + location.port, {
@@ -190,6 +38,8 @@ button:hover {
         });
 
         let selectedUser = null;
+        let userMessages = {};  // Store messages for each user
+        let unreadMessages = {}; // Track unread messages for each user
 
         // Listen for the user list
         socket.on('user_list', function(users) {
@@ -202,6 +52,12 @@ button:hover {
                 if (user !== username) {
                     const li = document.createElement('li');
                     li.textContent = user;
+
+                    // Create a badge for unread messages
+                    const badge = document.createElement('span');
+                    badge.classList.add('badge');
+                    li.appendChild(badge);
+
                     li.onclick = function() {
                         openChat(user);
                     };
@@ -210,18 +66,52 @@ button:hover {
             });
         });
 
+        // Update the badge with unread message count
+        function updateBadge(user) {
+            const userListItems = document.querySelectorAll('#user-list li');
+            const userItem = [...userListItems].find(item => item.textContent.startsWith(user));
+
+            if (userItem) {
+                const badge = userItem.querySelector('.badge');
+                const unreadCount = unreadMessages[user] || 0;
+
+                // Show count, or "5+" if unread count is more than 5
+                if (unreadCount > 5) {
+                    badge.textContent = '5+';
+                } else {
+                    badge.textContent = unreadCount > 0 ? unreadCount : '';
+                }
+            }
+        }
+
         // Open chat with the selected user
         function openChat(user) {
             selectedUser = user;
-            const messageDiv = document.getElementById('messages');
-            messageDiv.innerHTML = ''; // Clear current messages
-            const title = document.querySelector('h3');
-            title.textContent = `Chat with ${user}`;
+            const title = document.getElementById('selected-user');
+            title.textContent = user;
 
-            // Highlight the selected user
+            // Clear previous messages
+            const messageDiv = document.getElementById('messages');
+            messageDiv.innerHTML = '';
+
+            // Show the stored messages for the selected user
+            if (userMessages[user]) {
+                userMessages[user].forEach(function(msg) {
+                    const message = document.createElement('div');
+                    message.classList.add('message', msg.sender === username ? 'you' : 'other');
+                    message.textContent = `${msg.sender}: ${msg.message}`;
+                    messageDiv.appendChild(message);
+                });
+
+                // Mark messages as read
+                unreadMessages[user] = 0;
+                updateBadge(user); // Update badge after reading the messages
+            }
+
+            // Highlight the selected user in the list
             const userListItems = document.querySelectorAll('#user-list li');
             userListItems.forEach(item => item.classList.remove('active'));
-            const selectedItem = [...userListItems].find(item => item.textContent === user);
+            const selectedItem = [...userListItems].find(item => item.textContent.startsWith(user));
             if (selectedItem) {
                 selectedItem.classList.add('active');
             }
@@ -229,13 +119,47 @@ button:hover {
 
         // Listen for incoming messages
         socket.on('receive_message', function(data) {
-            if (data.sender === selectedUser || data.recipient === selectedUser) {
-                const messageDiv = document.getElementById('messages');
-                const message = document.createElement('div');
-                message.classList.add('message', data.sender === username ? 'you' : 'other');
-                message.textContent = `${data.sender}: ${data.message}`;
-                messageDiv.appendChild(message);
-                messageDiv.scrollTop = messageDiv.scrollHeight; // Scroll to the latest message
+            const messageDiv = document.getElementById('messages');
+
+            // Only display the message if a user is selected
+            if (selectedUser) {
+                // If the current chat is with the recipient or sender, show the message
+                if (selectedUser === data.sender || selectedUser === data.recipient) {
+                    const message = document.createElement('div');
+                    message.classList.add('message', data.sender === username ? 'you' : 'other');
+                    message.textContent = `${data.sender}: ${data.message}`;
+                    messageDiv.appendChild(message);
+                    messageDiv.scrollTop = messageDiv.scrollHeight; // Scroll to the latest message
+                }
+            }
+
+            // Save the message for later viewing when switching back
+            if (!userMessages[data.sender]) {
+                userMessages[data.sender] = [];
+            }
+            if (!userMessages[data.recipient]) {
+                userMessages[data.recipient] = [];
+            }
+
+            userMessages[data.sender].push({ sender: data.sender, message: data.message });
+            userMessages[data.recipient].push({ sender: data.sender, message: data.message });
+
+            // Increment unread messages for the recipient
+            if (data.recipient !== username) {
+                if (!unreadMessages[data.recipient]) {
+                    unreadMessages[data.recipient] = 0;
+                }
+                unreadMessages[data.recipient]++;
+                updateBadge(data.recipient); // Update the badge
+            }
+
+            // If the message is for the current user, update the unread count
+            if (data.sender !== username && selectedUser !== data.sender) {
+                if (!unreadMessages[data.sender]) {
+                    unreadMessages[data.sender] = 0;
+                }
+                unreadMessages[data.sender]++;
+                updateBadge(data.sender); // Update the badge
             }
         });
 
@@ -251,17 +175,36 @@ button:hover {
                     message: message
                 });
 
-                // Display the user's message immediately
+                // Display the user's message immediately in their chat
                 const messageDiv = document.getElementById('messages');
                 const userMessage = document.createElement('div');
                 userMessage.classList.add('message', 'you');
                 userMessage.textContent = `You: ${message}`;
                 messageDiv.appendChild(userMessage);
 
+                // Save the sent message for later viewing
+                if (!userMessages[selectedUser]) {
+                    userMessages[selectedUser] = [];
+                }
+                userMessages[selectedUser].push({ sender: username, message: message });
+
                 messageInput.value = ''; // Clear input after sending
                 messageDiv.scrollTop = messageDiv.scrollHeight; // Scroll to the latest message
+
+                // Reset unread message count
+                unreadMessages[selectedUser] = 0;
+                updateBadge(selectedUser); // Update badge after sending
             }
         }
+
+        // Listen for "Enter" key press to send the message
+        const messageInput = document.getElementById('message-input');
+        messageInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Prevent default Enter behavior (new line or form submission)
+                sendMessage();  // Call sendMessage function to send the message
+            }
+        });
     </script>
 </body>
 </html>

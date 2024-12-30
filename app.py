@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for
-from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory
+from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!'
+
 socketio = SocketIO(app)
 
-# Store online users and their session ids
 online_users = {}
 
 # Route for the login page
@@ -25,10 +26,24 @@ def login():
 def chat(username):
     return render_template('chat.html', username=username)
 
+# Serve the CSS for login
+@app.route('/login.css')
+def serve_login_css():
+    return send_from_directory('.', 'login.css')
+
+# Serve the CSS for chat
+@app.route('/styles.css')
+def serve_chat_css():
+    return send_from_directory('.', 'styles.css')
+
+# Serve the JavaScript for chat
+@app.route('/script.js')
+def serve_script():
+    return send_from_directory('.', 'chat.js')
+
 # Handle new connections
 @socketio.on('connect')
 def handle_connect():
-    # Get the username from the query string
     username = request.args.get('username')
     if username:
         online_users[username] = request.sid
@@ -40,8 +55,9 @@ def handle_connect():
 def handle_message(data):
     recipient = data['recipient']
     message = data['message']
+    sender = data['sender']
     if recipient in online_users:
-        emit('receive_message', {'sender': data['sender'], 'message': message}, room=online_users[recipient])
+        emit('receive_message', {'sender': sender, 'message': message}, room=online_users[recipient])
 
 # Handle user disconnection
 @socketio.on('disconnect')
