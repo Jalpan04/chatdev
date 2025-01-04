@@ -1,93 +1,193 @@
-const username = "{{ username }}";
+const username = "{{ username }}"; // Get the username from the template context
 const socket = io.connect(`${location.protocol}//${document.domain}:${location.port}`, {
     query: { username: username }
 });
 
 let selectedUser = null;
+let messageHistory = {}; // Stores message history for each user
 
-// Listen for the user list
+// Update the UI with a new user list
 socket.on('user_list', function(users) {
     const userList = document.getElementById('user-list');
-
-    // Clear previous user list
-    userList.innerHTML = '';
+    userList.innerHTML = ''; // Clear the current user list
 
     users.forEach(function(user) {
         if (user !== username) {
             const li = document.createElement('li');
             li.textContent = user;
-            li.onclick = function() {
-                openChat(user);
-            };
+            li.onclick = () => openChat(user);
             userList.appendChild(li);
         }
     });
 });
 
-// Open chat with the selected user
+// Open chat with selected user and display message history
 function openChat(user) {
     selectedUser = user;
-    const messageDiv = document.getElementById('messages');
-    messageDiv.innerHTML = ''; // Clear current messages
+    const messages = document.getElementById('messages');
+    messages.innerHTML = ''; // Clear current chat
     const title = document.querySelector('h3');
-    if (title) {
-        title.textContent = `Chat with ${user}`;
-    }
+    title.textContent = `Chat with ${user}`;
 
-    // Highlight the selected user
-    const userListItems = document.querySelectorAll('#user-list li');
-    userListItems.forEach(item => item.classList.remove('active'));
-    const selectedItem = [...userListItems].find(item => item.textContent === user);
-    if (selectedItem) {
-        selectedItem.classList.add('active');
+    displayMessageHistory(user);
+    unreadMessages[user] = 0;
+    updateBadge(user);
+    document.getElementById('input-container').style.display = 'flex';
+
+    highlightSelectedUser(user);
+}
+
+// Display message history for a user
+function displayMessageHistory(user) {
+    const messages = document.getElementById('messages');
+    if (messageHistory[user]) {
+        messageHistory[user].forEach(message => {
+            const div = document.createElement('div');
+            div.textContent = message.text || '';
+            div.classList.add(message.sender === username ? 'message-sender' : 'message-receiver');
+            if (message.audio) {
+                const audio = document.createElement('audio');
+                audio.src = message.audio;
+                audio.controls = true;
+                div.appendChild(audio);
+            }
+            messages.appendChild(div);
+        });
     }
 }
 
-// Listen for incoming messages
-socket.on('receive_message', function(data) {
+// Highlight the selected user in the user list
+function highlightSelectedUser(user) {
+    const userListItems = document.querySelectorAll('#user-list li');
+    userListItems.forEach(item => item.classList.remove('active'));
+    const selectedItem = [...userListItems].find(item => item.textContent === user);
+    selectedItem?.classList.add('active');
+}
+
+// Listen for incoming messages and display them
+function handleIncomingMessage(data, type = 'text') {
     if (data.sender === selectedUser || data.recipient === selectedUser) {
         const messageDiv = document.getElementById('messages');
         const message = document.createElement('div');
         message.classList.add('message', data.sender === username ? 'you' : 'other');
-        message.textContent = `${data.sender}: ${data.message}`;
+
+        if (type === 'text') {
+            message.textContent = `${data.sender}: ${data.message}`;
+        } else if (type === 'audio') {
+            const audioElement = document.createElement('audio');
+            audioElement.controls = true;
+            audioElement.src = data.audio_url;
+            message.appendChild(audioElement);
+        }
+
         messageDiv.appendChild(message);
-        messageDiv.scrollTop = messageDiv.scrollHeight; // Scroll to the latest message
+        messageDiv.scrollTop = messageDiv.scrollHeight;
+
+        saveMessageHistory(data);
     }
+}
+
+// Save the message to history
+function saveMessageHistory(data) {
+    if (!messageHistory[selectedUser]) {
+        messageHistory[selectedUser] = [];
+    }
+    messageHistory[selectedUser].push(data);
+}
+
+// Listen for incoming text messages
+socket.on('receive_message', function(data) {
+    handleIncomingMessage(data, 'text');
 });
 
-// Send message to the selected user
+// Listen for incoming voice messages
+socket.on('receive_voice_message', function(data) {
+    handleIncomingMessage(data, 'audio');
+});
+
+// Send a text message
 function sendMessage() {
     const messageInput = document.getElementById('message-input');
     const message = messageInput.value;
 
-    if (!selectedUser) {
-        alert('Please select a user to send a message.');
+    if (!selectedUser || !message.trim()) {
+        alert('Please select a user and enter a message.');
         return;
     }
 
-    if (message.trim()) {
-        socket.emit('send_message', {
-            sender: username,
-            recipient: selectedUser,
-            message: message
-        });
+    socket.emit('send_message', {
+        sender: username,
+        recipient: selectedUser,
+        message: message
+    });
 
-        // Display the user's message immediately
-        const messageDiv = document.getElementById('messages');
-        const userMessage = document.createElement('div');
-        userMessage.classList.add('message', 'you');
-        userMessage.textContent = `You: ${message}`;
-        messageDiv.appendChild(userMessage);
+    const messageDiv = document.getElementById('messages');
+    const userMessage = document.createElement('div');
+    userMessage.classList.add('message', 'you');
+    userMessage.textContent = `You: ${message}`;
+    messageDiv.appendChild(userMessage);
 
-        messageInput.value = ''; // Clear input after sending
-        messageDiv.scrollTop = messageDiv.scrollHeight; // Scroll to the latest message
-    }
+    messageInput.value = '';
+    messageDiv.scrollTop = messageDiv.scrollHeight;
+
+    saveMessageHistory({
+        sender: username,
+        recipient: selectedUser,
+        message: message
+    });
 }
 
-const messageInput = document.getElementById('message-input');
-messageInput.addEventListener('keydown', function(event) {
+// Setup voice message functionality
+const voiceButton = document.getElementById('voice-button');
+let mediaRecorder;
+let audioChunks = [];
+
+voiceButton.addEventListener('mousedown', async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+        alert('Audio recording is not supported in this browser.');
+        return;
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        audioChunks = [];
+        const reader = new FileReader();
+        reader.onload = () => {
+            const base64Audio = reader.result.split(',')[1];
+            if (!selectedUser) {
+                alert('Please select a user to send a voice message.');
+                return;
+            }
+
+            socket.emit('send_voice_message', {
+                sender: username,
+                recipient: selectedUser,
+                audio_blob: base64Audio
+            });
+        };
+        reader.readAsDataURL(audioBlob);
+    };
+
+    mediaRecorder.start();
+});
+
+voiceButton.addEventListener('mouseup', () => {
+    if (mediaRecorder?.state !== 'inactive') {
+        mediaRecorder.stop();
+    }
+});
+
+// Allow sending text messages on Enter key press
+document.getElementById('message-input').addEventListener('keydown', function(event) {
     if (event.key === 'Enter') {
-        event.preventDefault(); // Prevent default Enter behavior (new line or form submission)
-        sendMessage();  // Call sendMessage function to send the message
+        event.preventDefault();
+        sendMessage();
     }
 });
