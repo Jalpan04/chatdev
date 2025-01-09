@@ -8,70 +8,98 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
-
 online_users = {}
 
 # Directory to save voice messages
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Route for the login page
+# Home route
 @app.route('/')
 def index():
+    return render_template('welcome.html')
+
+# Route for signup page
+@app.route('/signup')
+def signup_page():
+    return render_template('signup.html')
+
+# Signup handling route (POST)
+@app.route('/signup', methods=['POST'])
+def signup():
+    # Retrieve the username, email, password, and confirm_password from the form
+    username = request.form.get('username')
+    email = request.form.get('email')
+    password = request.form.get('password')
+    confirm_password = request.form.get('confirm_password')
+
+    # Check if all fields are provided and passwords match
+    if username and email and password and confirm_password and password == confirm_password:
+        # Redirect to the login page after successful signup
+        return redirect(url_for('login_page'))
+
+    # If validation fails, redirect back to the signup page
+    return redirect(url_for('signup_page'))
+
+# Route for the login page
+@app.route('/login')
+def login_page():
     return render_template('login.html')
 
-# Route to handle user login
+# Login handling route (POST)
 @app.route('/login', methods=['POST'])
 def login():
+    # Retrieve the username and password from the form
     username = request.form.get('username')
-    if username:
-        return redirect(url_for('chat', username=username))  # Redirect to chat page with the username
-    return redirect(url_for('index'))  # Redirect back to login if no username provided
+    password = request.form.get('password')
+
+    # Check if both username and password are provided
+    if username and password:
+        # Redirect to chat page with the username
+        return redirect(url_for('chat', username=username))
+
+    # If either is missing, redirect back to the login page
+    return redirect(url_for('login_page'))
 
 # Route for the chat page
 @app.route('/chat/<username>')
 def chat(username):
     return render_template('chat.html', username=username)
 
-# Serve the CSS for login
-@app.route('/login.css')
-def serve_login_css():
-    return send_from_directory('.', 'login.css')
 
-# Serve the CSS for chat
-@app.route('/styles.css')
-def serve_chat_css():
-    return send_from_directory('.', 'styles.css')
+# Serve static files (CSS, JS, Images) from the 'static' folder
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(os.path.join(app.root_path, 'static'), filename)
 
-# Serve the JavaScript for chat
-@app.route('/script.js')
-def serve_script():
-    return send_from_directory('.', 'chat.js')
 
 # Serve uploaded audio files
 @app.route('/uploads/<filename>')
 def serve_audio(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
-# Handle new connections
+# Handle new connections (SocketIO)
 @socketio.on('connect')
 def handle_connect():
     username = request.args.get('username')
     if username:
-        online_users[username] = request.sid
+        online_users[username] = request.sid  # Store the session ID for the user
         # Broadcast the updated user list
         emit('user_list', list(online_users.keys()), broadcast=True)
 
-# Handle sending messages
+# Handle sending messages (SocketIO)
 @socketio.on('send_message')
 def handle_message(data):
     recipient = data['recipient']
     message = data['message']
     sender = data['sender']
-    if recipient in online_users:
-        emit('receive_message', {'sender': sender, 'message': message}, room=online_users[recipient])
 
-# Handle sending voice messages
+    # Ensure the recipient exists in the online users
+    if recipient in online_users:
+        recipient_sid = online_users[recipient]
+        emit('receive_message', {'sender': sender, 'message': message}, room=recipient_sid)
+
+# Handle sending voice messages (SocketIO)
 @socketio.on('send_voice_message')
 def handle_voice_message(data):
     recipient = data['recipient']
@@ -88,17 +116,20 @@ def handle_voice_message(data):
         with open(audio_path, "wb") as audio_file:
             audio_file.write(base64.b64decode(audio_blob))
 
+        # Ensure the recipient is connected
         if recipient in online_users:
+            recipient_sid = online_users[recipient]
             audio_url = url_for('serve_audio', filename=audio_filename, _external=True)
-            emit('receive_voice_message', {'sender': sender, 'audio_url': audio_url}, room=online_users[recipient])
+            emit('receive_voice_message', {'sender': sender, 'audio_url': audio_url}, room=recipient_sid)
 
     except Exception as e:
         print(f"Error saving audio message: {e}")
         emit('error', {'message': 'Error saving audio message.'}, room=request.sid)
 
-# Handle user disconnection
+# Handle user disconnection (SocketIO)
 @socketio.on('disconnect')
 def handle_disconnect():
+    # Find the username associated with the current session ID
     username = [user for user, sid in online_users.items() if sid == request.sid]
     if username:
         username = username[0]
@@ -107,4 +138,3 @@ def handle_disconnect():
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
-

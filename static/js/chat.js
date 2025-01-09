@@ -6,20 +6,29 @@ const socket = io.connect(`${location.protocol}//${document.domain}:${location.p
 let selectedUser = null;
 let messageHistory = {}; // Stores message history for each user
 
-// Update the UI with a new user list
-socket.on('user_list', function(users) {
-    const userList = document.getElementById('user-list');
-    userList.innerHTML = ''; // Clear the current user list
+socket.on('connect', () => {
+    console.log('Connected to server');
+});
 
-    users.forEach(function(user) {
+socket.on('disconnect', () => {
+    console.log('Disconnected from server');
+});
+
+// Update the UI with a new user list
+socket.on('user_list', (users) => {
+    console.log('Online users:', users); // Debug log
+    const userList = document.getElementById('user-list');
+    userList.innerHTML = ''; // Clear existing list
+    users.forEach((user) => {
         if (user !== username) {
             const li = document.createElement('li');
             li.textContent = user;
-            li.onclick = () => openChat(user);
+            li.onclick = () => openChat(user); // Attach click handler
             userList.appendChild(li);
         }
     });
 });
+
 
 // Open chat with selected user and display message history
 function openChat(user) {

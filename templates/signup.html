@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <link rel="stylesheet" href="/static/css/login.css">
+    <link rel="stylesheet" href="/static/css/signup.css">
 </head>
 <body>
     <div class="login-container">
-        <h1>Login</h1>
+        <h1>Sign Up</h1>
         <form action="/login" method="POST">
             <input type="text" name="username" placeholder="Enter your username" required>
+            <input type="email" name="email" placeholder="Enter your email-id" required>
             <input type="password" name="password" placeholder="Enter password" required>
+            <input type="password" name="confirmPassword" placeholder="Confirm password" required>
             <button type="submit">Login</button>
         </form>
     </div>
@@ -22,9 +24,11 @@
         form.addEventListener('submit', function(event) {
             const username = form.username.value;
             const password = form.password.value;
-            if (!username.trim() || !password.trim()) {
+            const confirmPassword = form.password.value;
+            const email = form.email.value;
+            if (!username.trim() || !password.trim() || !confirmPassword.trim() || !email.trim()) {
                 event.preventDefault();
-                alert('Please enter a valid username');
+                alert('A field is missing or enter valid credentials');
             }
         });
     </script>
