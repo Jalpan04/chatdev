@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <link rel="stylesheet" href="/static/css/styles.css"> <!-- External stylesheet link -->
+    <!-- Include FontAwesome for microphone and send icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+<!-- Main container for chat layout -->
+<div class="container">
+    <!-- Left Sidebar (Online Users) -->
+    <div class="left-sidebar">
+        <h2>Welcome {{ username }}</h2> <!-- Greet user with their username -->
+        <h3>Online Users</h3>
+        <ul id="user-list"></ul> <!-- List of online users will be populated here -->
+    </div>
+
+    <!-- Right Section for Chat -->
+    <div class="right-section">
+        <div id="messages"></div> <!-- Messages exchanged with selected user will appear here -->
+        <div class="input-container" id="input-container" style="display: none;">
+            <!-- Text input and buttons for sending messages -->
+            <input type="text" id="message-input" placeholder="Type your message">
+            <button onclick="sendMessage()"> <!-- Button for sending text messages -->
+                <i class="fas fa-paper-plane"></i>
+            </button>
+            <button id="record-btn" onclick="toggleRecording()"> <!-- Button for starting/stopping voice recording -->
+                <i class="fas fa-microphone"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Socket.io and Custom JavaScript -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
+<script>
+    const username = "{{ username }}"; // Initialize with the server-side username
+    const socket = io.connect(location.origin, {query: {username}}); // Connect to socket server
+    let selectedUser = null, isRecording = false, mediaRecorder, audioChunks = [];
+    const messageHistory = {}; // Store message history for each user
+    const unreadMessages = {}; // Track unread messages for each user
+
+    // Update the unread message badge for a user
+    function updateBadge(user) {
+        const userListItems = document.querySelectorAll('#user-list li');
+        const userItem = [...userListItems].find(item => item.textContent.trim().startsWith(user));
+        if (userItem) {
+            const badge = userItem.querySelector('.badge');
+            const unreadCount = unreadMessages[user] || 0;
+            badge.textContent = unreadCount > 0 ? (unreadCount > 5 ? '5+' : unreadCount) : '';
+            badge.style.display = unreadCount > 0 ? 'inline-block' : 'none'; // Show badge if there are unread messages
+        }
+    }
+
+    // Populate the list of online users
+    socket.on('user_list', users => {
+        const userList = document.getElementById('user-list');
+        userList.innerHTML = ''; // Clear current list
+        users.forEach(user => {
+            if (user !== username) { // Exclude current user from the list
+                const li = document.createElement('li');
+                li.textContent = user;
+
+                // Create a badge for unread messages
+                const badge = document.createElement('span');
+                badge.classList.add('badge');
+                badge.style.display = 'none'; // Initially hidden
+                li.appendChild(badge);
+
+                // Set up click handler to open chat with selected user
+                li.onclick = () => openChat(user);
+                userList.appendChild(li);
+            }
+        });
+    });
+
+    // Open chat window for selected user
+    function openChat(user) {
+        selectedUser = user;
+        const messages = document.getElementById('messages');
+        messages.innerHTML = ''; // Clear current chat
+
+        // Load previous messages from messageHistory
+        if (messageHistory[user]) {
+            messageHistory[user].forEach(message => {
+                const div = document.createElement('div');
+                div.textContent = message.text;
+                div.classList.add(message.sender === username ? 'message-sender' : 'message-receiver'); // Apply style based on sender
+                if (message.audio) {
+                    const audio = document.createElement('audio');
+                    audio.src = message.audio;
+                    audio.controls = true; // Show audio controls
+                    div.appendChild(audio);
+                }
+                messages.appendChild(div);
+            });
+        }
+
+        unreadMessages[user] = 0; // Reset unread count for the user
+        updateBadge(user); // Update badge for unread messages
+        document.getElementById('input-container').style.display = 'flex'; // Show input bar
+
+        // Remove 'active' class from all user items
+        const userListItems = document.querySelectorAll('#user-list li');
+        userListItems.forEach(item => item.classList.remove('active'));
+
+        // Add 'active' class to the selected user item
+        const selectedItem = [...userListItems].find(item => item.textContent.startsWith(user));
+        if (selectedItem) {
+            selectedItem.classList.add('active');
+        }
+    }
+
+    // Close the chat window
+    function closeChat() {
+        selectedUser = null;
+        document.getElementById('messages').innerHTML = '';
+        document.getElementById('input-container').style.display = 'none'; // Hide input bar
+    }
+
+    // Toggle voice message recording
+    function toggleRecording() {
+        if (selectedUser === null) {
+            alert("You must select a user to chat with before recording a voice message.");
+            return;
+        }
+        if (isRecording) stopRecording(); // Stop recording if already in progress
+        else startRecording(); // Start a new recording
+    }
+
+    // Start recording the voice message
+    function startRecording() {
+        navigator.mediaDevices.getUserMedia({audio: true}).then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks);
+                const audioUrl = URL.createObjectURL(audioBlob);
+                sendVoiceMessage(audioBlob); // Send the recorded audio as a message
+            };
+            mediaRecorder.start();
+            isRecording = true;
+            document.getElementById('record-btn').innerHTML = '<i class="fas fa-stop"></i>'; // Change icon to 'stop'
+        });
+    }
+
+    // Stop recording the voice message
+    function stopRecording() {
+        mediaRecorder.stop();
+        isRecording = false;
+        document.getElementById('record-btn').innerHTML = '<i class="fas fa-microphone"></i>'; // Revert to 'microphone' icon
+    }
+
+    // Send voice message to the server
+    function sendVoiceMessage(audioBlob) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const audioBase64 = reader.result.split(',')[1]; // Convert audio to base64
+            const audioUrl = `data:audio/webm;base64,${audioBase64}`;
+            if (!messageHistory[selectedUser]) {
+                messageHistory[selectedUser] = [];
+            }
+            messageHistory[selectedUser].push({sender: username, text: 'You: ', audio: audioUrl}); // Store the message in history
+            socket.emit('send_voice_message', {
+                sender: username,
+                recipient: selectedUser,
+                audio_blob: audioBase64
+            });
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.textContent = 'You: ';
+            div.classList.add('message-sender');
+            const audio = document.createElement('audio');
+            audio.src = audioUrl;
+            audio.controls = true;
+            div.appendChild(audio);
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        };
+        reader.readAsDataURL(audioBlob); // Convert blob to base64
+    }
+
+    // Receive and display voice message from server
+    socket.on('receive_voice_message', data => {
+        const {sender, audio_url} = data;
+        if (!messageHistory[sender]) {
+            messageHistory[sender] = [];
+        }
+        messageHistory[sender].push({sender, text: `${sender}: `, audio: audio_url});
+        if (sender === selectedUser) {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.textContent = `${sender}: `;
+            div.classList.add('message-receiver');
+            const audio = document.createElement('audio');
+            audio.src = audio_url;
+            audio.controls = true;
+            div.appendChild(audio);
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        } else {
+            unreadMessages[sender] = (unreadMessages[sender] || 0) + 1; // Track unread messages
+            updateBadge(sender); // Update badge for unread messages
+        }
+    });
+
+    // Send text message to the server
+    function sendMessage() {
+        const input = document.getElementById('message-input');
+        if (selectedUser && input.value.trim()) {
+            const messageText = input.value.trim();
+            if (!messageHistory[selectedUser]) {
+                messageHistory[selectedUser] = [];
+            }
+            messageHistory[selectedUser].push({sender: username, text: `You: ${messageText}`});
+            socket.emit('send_message', {
+                sender: username,
+                recipient: selectedUser,
+                message: messageText
+            });
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.textContent = `You: ${messageText}`;
+            div.classList.add('message-sender');
+            messages.appendChild(div);
+            input.value = ''; // Clear input field after sending
+            messages.scrollTop = messages.scrollHeight; // Scroll to the bottom
+        }
+    }
+
+    // Receive and display text message from server
+    socket.on('receive_message', data => {
+        const {sender, message} = data;
+        if (!messageHistory[sender]) {
+            messageHistory[sender] = [];
+        }
+        messageHistory[sender].push({sender, text: `${sender}: ${message}`});
+        if (sender === selectedUser) {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.textContent = `${sender}: ${message}`;
+            div.classList.add('message-receiver');
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        } else {
+            unreadMessages[sender] = (unreadMessages[sender] || 0) + 1;
+            updateBadge(sender); // Update badge for unread messages
+        }
+    });
+
+    // Send message on 'Enter' key press
+    const messageInput = document.getElementById('message-input');
+    messageInput.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            sendMessage();
+        }
+    });
+</script>
+</body>
+</html>

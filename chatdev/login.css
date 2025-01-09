@@ -1,0 +1,52 @@
+/* Global Styles */
+body {
+    background-color: #2f3136;
+    color: white;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+/* Login Container */
+.login-container {
+    text-align: center;
+    background-color: #36393f;
+    padding: 2.5rem; /* Converted to rem for better scalability */
+    border-radius: 10px;
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
+}
+
+/* Header Styles */
+h1 {
+    color: #7289da;
+    margin-bottom: 1.25rem; /* Converted to rem for consistency */
+}
+
+/* Input Field Styles */
+form input[type="text"] {
+    width: 80%;
+    padding: 0.625rem; /* Converted to rem for better responsiveness */
+    margin: 0.625rem 0; /* Consistent spacing around the input */
+    border-radius: 5px;
+    border: none;
+    font-size: 1rem; /* Using rem for font size */
+}
+
+/* Button Styles */
+form button {
+    background-color: #7289da;
+    color: white;
+    border: none;
+    padding: 0.625rem 1.25rem; /* Consistent padding using rem */
+    border-radius: 5px;
+    font-size: 1rem; /* Font size in rem for scalability */
+    cursor: pointer;
+    transition: background-color 0.3s ease; /* Smooth hover effect */
+}
+
+form button:hover {
+    background-color: #5a6e98;
+}
