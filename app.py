@@ -6,13 +6,15 @@ from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] =  10 * 1024 * 1024 * 1024  # 10GB file limit
+
 socketio = SocketIO(app)
 
 online_users = {}
 
-# Directory to save voice messages
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# Ensure upload directory exists
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Home route
 @app.route('/')
@@ -27,18 +29,14 @@ def signup_page():
 # Signup handling route (POST)
 @app.route('/signup', methods=['POST'])
 def signup():
-    # Retrieve the username, email, password, and confirm_password from the form
     username = request.form.get('username')
     email = request.form.get('email')
     password = request.form.get('password')
     confirm_password = request.form.get('confirm_password')
 
-    # Check if all fields are provided and passwords match
     if username and email and password and confirm_password and password == confirm_password:
-        # Redirect to the login page after successful signup
         return redirect(url_for('login_page'))
 
-    # If validation fails, redirect back to the signup page
     return redirect(url_for('signup_page'))
 
 # Route for the login page
@@ -49,16 +47,12 @@ def login_page():
 # Login handling route (POST)
 @app.route('/login', methods=['POST'])
 def login():
-    # Retrieve the username and password from the form
     username = request.form.get('username')
     password = request.form.get('password')
 
-    # Check if both username and password are provided
     if username and password:
-        # Redirect to chat page with the username
         return redirect(url_for('chat', username=username))
 
-    # If either is missing, redirect back to the login page
     return redirect(url_for('login_page'))
 
 # Route for the chat page
@@ -66,25 +60,23 @@ def login():
 def chat(username):
     return render_template('chat.html', username=username)
 
-
-# Serve static files (CSS, JS, Images) from the 'static' folder
+# Serve static files (CSS, JS, Images)
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory(os.path.join(app.root_path, 'static'), filename)
 
-
-# Serve uploaded audio files
+# Serve uploaded files
 @app.route('/uploads/<filename>')
-def serve_audio(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+def serve_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # Handle new connections (SocketIO)
 @socketio.on('connect')
 def handle_connect():
     username = request.args.get('username')
     if username:
-        online_users[username] = request.sid  # Store the session ID for the user
-        # Broadcast the updated user list
+        online_users[username] = request.sid
+        print(f"Online users: {online_users}")
         emit('user_list', list(online_users.keys()), broadcast=True)
 
 # Handle sending messages (SocketIO)
@@ -94,42 +86,60 @@ def handle_message(data):
     message = data['message']
     sender = data['sender']
 
-    # Ensure the recipient exists in the online users
     if recipient in online_users:
         recipient_sid = online_users[recipient]
         emit('receive_message', {'sender': sender, 'message': message}, room=recipient_sid)
 
-# Handle sending voice messages (SocketIO)
+# Handle voice messages (SocketIO)
 @socketio.on('send_voice_message')
 def handle_voice_message(data):
     recipient = data['recipient']
     sender = data['sender']
     audio_blob = data['audio_blob']
 
-    # Use a timestamp to create a unique filename for each audio message
     timestamp = str(int(time.time()))
     audio_filename = f"{sender}_{recipient}_{timestamp}.webm"
-    audio_path = os.path.join(UPLOAD_FOLDER, audio_filename)
+    audio_path = os.path.join(app.config['UPLOAD_FOLDER'], audio_filename)
 
     try:
-        # Decode the base64 audio data and save it as a file
         with open(audio_path, "wb") as audio_file:
             audio_file.write(base64.b64decode(audio_blob))
 
-        # Ensure the recipient is connected
         if recipient in online_users:
             recipient_sid = online_users[recipient]
-            audio_url = url_for('serve_audio', filename=audio_filename, _external=True)
+            audio_url = url_for('serve_file', filename=audio_filename, _external=True)
             emit('receive_voice_message', {'sender': sender, 'audio_url': audio_url}, room=recipient_sid)
 
     except Exception as e:
         print(f"Error saving audio message: {e}")
         emit('error', {'message': 'Error saving audio message.'}, room=request.sid)
 
+
+# Handle file uploads (Any file type)
+@socketio.on('send_file')
+def handle_file(data):
+    sender = data['sender']
+    recipient = data['recipient']
+    file_name = data['file_name']
+    file_type = data['file_type']
+    file_data = data['file_data']
+
+
+
+    if recipient in online_users:
+        recipient_sid = online_users[recipient]
+        emit('receive_file', {
+            'sender': sender,
+            'file_name': file_name,
+            'file_type': file_type,
+            'file_data': file_data
+        }, room=recipient_sid)  # Send to the correct recipient
+    else:
+        emit('error', {'message': 'Recipient is not online.'}, room=request.sid)
+
 # Handle user disconnection (SocketIO)
 @socketio.on('disconnect')
 def handle_disconnect():
-    # Find the username associated with the current session ID
     username = [user for user, sid in online_users.items() if sid == request.sid]
     if username:
         username = username[0]
@@ -137,4 +147,4 @@ def handle_disconnect():
         emit('user_list', list(online_users.keys()), broadcast=True)
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
