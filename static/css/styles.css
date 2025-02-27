@@ -63,6 +63,7 @@ li {
 li:hover {
     background: linear-gradient(145deg, #3d4047, #2f3238);
     transform: translateY(-2px);
+    background : #66aaff
 }
 
 .active {
@@ -74,7 +75,7 @@ li:hover {
 
 /* Badge for unread messages */
 .badge {
-    background-color: #ff6b6b;
+     background-color: #ff0000;
     color: white;
     font-size: 12px;
     padding: 4px 10px;
@@ -214,3 +215,4 @@ button:hover {
     background-color: #5a6e98;
     transform: translateY(-2px);
 }
+

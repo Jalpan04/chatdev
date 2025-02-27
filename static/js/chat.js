@@ -193,6 +193,64 @@ voiceButton.addEventListener('mouseup', () => {
     }
 });
 
+
+
+//File sending functionality
+// Function to send a file
+function sendFile() {
+    const fileInput = document.getElementById('file-input');
+    const file = fileInput.files[0];
+
+    if (!file || !selectedUser) {
+        alert("Please select a user and choose a file.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file); // Read file as Base64
+    reader.onload = function () {
+        const fileData = reader.result.split(',')[1]; // Extract Base64 content
+        socket.emit('send_file', {
+            sender: username,
+            recipient: selectedUser,
+            file_name: file.name,
+            file_type: file.type,
+            file_data: fileData // Sending only Base64 content
+        });
+
+        // Display the sent file message in chat
+        displayFileMessage(username, file.name, fileData, file.type);
+    };
+}
+
+// Function to display a file message in chat
+function displayFileMessage(sender, fileName, fileData, fileType) {
+    const messages = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = sender === username ? 'message-sender' : 'message-receiver';
+
+    const link = document.createElement('a');
+    link.href = `data:${fileType};base64,${fileData}`;
+    link.download = fileName;
+    link.textContent = `📎 Download ${fileName}`;
+
+    div.appendChild(link);
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+}
+
+// Function to trigger file input
+function triggerFileInput() {
+    document.getElementById('file-input').click();
+}
+
+// Listen for incoming files
+socket.on('receive_file', function (data) {
+    console.log("Received file:", data); // Debugging log
+    displayFileMessage(data.sender, data.file_name, data.file_data, data.file_type);
+});
+
+
 // Allow sending text messages on Enter key press
 document.getElementById('message-input').addEventListener('keydown', function(event) {
     if (event.key === 'Enter') {
