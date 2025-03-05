@@ -17,6 +17,23 @@ body {
     position: relative;
 }
 
+textarea {
+    flex-grow: 1;
+    background-color: #40444b;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+    margin-right: 10px;
+    font-size: 14px;
+    height: 50px;
+    resize: none; /* Prevent manual resizing */
+    overflow-y: auto; /* Allow scrolling when text exceeds the height */
+    word-wrap: break-word; /* Ensures long words wrap properly */
+    overflow-wrap: break-word;
+    white-space: pre-wrap; /* Preserves line breaks while wrapping text */
+}
 /* Left Sidebar (Online Users) */
 .left-sidebar {
     width: 250px;
@@ -63,7 +80,7 @@ li {
 li:hover {
     background: linear-gradient(145deg, #3d4047, #2f3238);
     transform: translateY(-2px);
-    background : #66aaff
+    background: #66aaff;
 }
 
 .active {
@@ -75,7 +92,7 @@ li:hover {
 
 /* Badge for unread messages */
 .badge {
-     background-color: #ff0000;
+    background-color: #ff0000;
     color: white;
     font-size: 12px;
     padding: 4px 10px;
@@ -96,7 +113,7 @@ li span.username {
     flex-grow: 1;
 }
 
-/* Right Section for Chat */
+/* Messages Section */
 .right-section {
     flex-grow: 1;
     display: flex;
@@ -108,7 +125,6 @@ li span.username {
     padding-bottom: 60px;
 }
 
-/* Messages Section */
 #messages {
     display: flex;
     flex-direction: column;
@@ -119,8 +135,27 @@ li span.username {
     width: 100%;
     max-height: calc(100vh - 120px);
     box-sizing: border-box;
-    /*background: rgba(255, 255, 255, 0.05);*/
-    /*box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);*/
+}
+
+.message-block {
+    background: #2b2e35;
+    padding: 8px 12px;
+    margin: 5px 0;
+    border-radius: 8px;
+    max-width: 80%;
+}
+
+.username {
+    color: #66aaff;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+
+
+.message-text {
+    color: #dcdfe4;
+    margin: 0;
 }
 
 .message-sender, .message-receiver {
@@ -131,6 +166,25 @@ li span.username {
     background: #2b2e35;
     transition: transform 0.2s ease;
 }
+.message-sender-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.message-timestamp {
+    margin-left: auto;
+    font-size: 0.8em;
+    color: gray;
+}
+
+.message-content p {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
 
 .message-sender:hover, .message-receiver:hover {
     transform: scale(1.02);
@@ -144,30 +198,31 @@ li span.username {
     color: #66aaff;
 }
 
+/* Scrollbar Customization */
 ::-webkit-scrollbar {
-    width: 10px; /* Width of the scrollbar */
-    height: 10px; /* Height for horizontal scrollbar */
+    width: 10px;
+    height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-    background: linear-gradient(135deg, #2b2e34, #212326); /* Track background */
-    border-radius: 5px; /* Rounded corners */
-    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3); /* Optional inner shadow */
+    background: linear-gradient(135deg, #2b2e34, #212326);
+    border-radius: 5px;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: linear-gradient(145deg, #7289da, #5a6e98); /* Thumb color */
-    border-radius: 5px; /* Rounded corners */
-    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3); /* Optional shadow */
+    background: linear-gradient(145deg, #7289da, #5a6e98);
+    border-radius: 5px;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(145deg, #5a6e98, #4a5c78); /* Hover color */
+    background: linear-gradient(145deg, #5a6e98, #4a5c78);
 }
 
 
 
-/* Input container fixed at the bottom */
+/* Input Container Fixed at the Bottom */
 .input-container {
     position: fixed;
     bottom: 0;
@@ -197,22 +252,20 @@ button {
     background: #7289da;
     color: white;
     border: none;
-    border-radius: 8px; /* Keeps a slight rounded rectangle shape */
-    width: 50px; /* Equal width and height for square shape */
+    border-radius: 8px;
+    width: 50px;
     height: 50px;
     margin: 0 5px;
-    font-size: 18px; /* Adjust font size to fit well within the button */
+    font-size: 18px;
     cursor: pointer;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    display: flex; /* Centers content inside the button */
+    display: flex;
     align-items: center;
     justify-content: center;
     transition: background-color 0.3s, transform 0.2s;
 }
 
-
 button:hover {
     background-color: #5a6e98;
     transform: translateY(-2px);
 }
-

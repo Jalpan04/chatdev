@@ -6,302 +6,340 @@
     <title>Chat</title>
     <link rel="stylesheet" href="/static/css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<!--    <style>-->
-<!--        /* CSS for the badge */-->
-<!--        .badge {-->
-<!--            position: absolute;-->
-<!--            top: 5px;-->
-<!--            right: 5px;-->
-<!--            background-color: #7289da;-->
-<!--            color: white;-->
-<!--            padding: 2px 5px;-->
-<!--            border-radius: 50%;-->
-<!--            font-size: 12px;-->
-<!--            display: none; /* Initially hidden */-->
-<!--        }-->
-
-<!--        /* Blue badge when the user is selected */-->
-<!--        .selected .badge {-->
-<!--            background-color: blue; /* Blue badge for selected user */-->
-<!--        }-->
-
-<!--        /* Active class for the selected user */-->
-<!--        .active {-->
-<!--            background-color: #e0e0e0; /* Light background for selected user */-->
-<!--        }-->
-<!--    </style>-->
 </head>
 <body>
-<div class="container">
-    <div class="left-sidebar">
-        <h2>Welcome {{ username }}</h2>
-        <h3>Online Users</h3>
-        <ul id="user-list"></ul>
-    </div>
+    <div class="container">
+        <div class="left-sidebar">
+            <h2>Welcome {{ username }}</h2>
+            <h3>Online Users</h3>
+            <ul id="user-list"></ul>
+        </div>
 
-    <div class="right-section">
-        <div id="messages"></div>
-        <div class="input-container" id="input-container" style="display: none;">
-            <input type="text" id="message-input" placeholder="Type your message" onkeydown="checkEnter(event)">
-            <button onclick="sendMessage()">
-                <i class="fas fa-paper-plane"></i>
-            </button>
-            <button id="record-btn" onclick="toggleRecording()">
-                <i class="fas fa-microphone"></i>
-            </button>
-            <button onclick="triggerFileInput()">
-                <i class="fas fa-paperclip"></i>
-            </button>
-            <input type="file" id="file-input" onchange="sendFile()" style="display:none;">
+        <div class="right-section">
+            <div id="messages"></div>
+            <div class="input-container" id="input-container" style="display: none;">
+                <textarea id="message-input" placeholder="Type your message..." onkeydown="checkEnter(event)"></textarea>
+                <button onclick="sendMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+                <button id="record-btn" onclick="toggleRecording()">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button onclick="triggerFileInput()">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+                <input type="file" id="file-input" onchange="sendFile()" style="display:none;">
+            </div>
         </div>
     </div>
-</div>
 
-<div class="audio-player">
-  <button class="play-btn" onclick="togglePlay(this)">
-    <i class="fas fa-play"></i>
-  </button>
-  <div class="waveform" id="waveform"></div>
-  <span class="timer">00:00</span>
-</div>
-<audio class="audio-file" src="your-audio-file.mp3"></audio>
+    <div class="audio-player">
+        <button class="play-btn" onclick="togglePlay(this)">
+            <i class="fas fa-play"></i>
+        </button>
+        <div class="waveform" id="waveform"></div>
+        <span class="timer">00:00</span>
+    </div>
+    <audio class="audio-file" src="your-audio-file.mp3"></audio>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
-<script>
-    const username = "{{ username }}";
-    const socket = io.connect(location.origin, { query: { username } });
-    let selectedUser = null;
-    let isRecording = false;
-    let mediaRecorder = null;
-    let audioChunks = [];
-    const messageHistory = {};
-    const unreadMessages = {};
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        const username = "{{ username }}";
+        const socket = io.connect(location.origin, { query: { username } });
+        let selectedUser = null;
+        let isRecording = false;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        const messageHistory = {};
+        const unreadMessages = {};
 
-    // Update unread badge
-    function updateBadge(user) {
-        const userListItems = document.querySelectorAll('#user-list li');
-        const userItem = [...userListItems].find(item => item.textContent.trim().startsWith(user));
+        // Update unread badge
+        function updateBadge(user) {
+            const userListItems = document.querySelectorAll('#user-list li');
+            const userItem = [...userListItems].find(item => item.textContent.trim().startsWith(user));
 
-        if (userItem) {
-            const badge = userItem.querySelector('.badge') || document.createElement('span');
-            badge.className = 'badge';
-            const unreadCount = unreadMessages[user] || 0;
-            badge.textContent = unreadCount > 5 ? '5+' : unreadCount;
-            badge.style.display = unreadCount > 0 ? 'inline-block' : 'none';
-            if (!userItem.contains(badge)) userItem.appendChild(badge); // Ensure badge is added
-        }
-    }
-
-    // Populate online users
-    socket.on('user_list', users => {
-        const userList = document.getElementById('user-list');
-        userList.innerHTML = ''; // Clear the list before repopulating
-        users.forEach(user => {
-            if (user !== username) {
-                const li = document.createElement('li');
-                li.textContent = user;
-                li.onclick = () => openChat(user);
-
-                // Create and append a badge for unread messages
-                const badge = document.createElement('span');
+            if (userItem) {
+                const badge = userItem.querySelector('.badge') || document.createElement('span');
                 badge.className = 'badge';
-                badge.style.display = 'none'; // Initially hide
-                li.appendChild(badge);
+                const unreadCount = unreadMessages[user] || 0;
+                badge.textContent = unreadCount > 5 ? '5+' : unreadCount;
+                badge.style.display = unreadCount > 0 ? 'inline-block' : 'none';
+                if (!userItem.contains(badge)) userItem.appendChild(badge);
+            }
+        }
 
-                userList.appendChild(li);
-                updateBadge(user); // Update badge after user list is populated
+        // Populate online users
+        socket.on('user_list', users => {
+            const userList = document.getElementById('user-list');
+            userList.innerHTML = '';
+            users.forEach(user => {
+                if (user !== username) {
+                    const li = document.createElement('li');
+                    li.textContent = user;
+                    li.onclick = () => openChat(user);
+
+                    const badge = document.createElement('span');
+                    badge.className = 'badge';
+                    badge.style.display = 'none';
+                    li.appendChild(badge);
+
+                    userList.appendChild(li);
+                    updateBadge(user);
+                }
+            });
+        });
+
+        // Open chat
+        function openChat(user) {
+            selectedUser = user;
+            const messages = document.getElementById('messages');
+            messages.innerHTML = '';
+            if (messageHistory[user]) {
+                messageHistory[user].forEach(msg => displayMessage(msg));
+            }
+            unreadMessages[user] = 0;
+            updateBadge(user);
+            document.getElementById('input-container').style.display = 'flex';
+
+            const userListItems = document.querySelectorAll('#user-list li');
+            userListItems.forEach(item => item.classList.remove('active'));
+
+            const activeUser = [...userListItems].find(item => item.textContent.trim() === user);
+            if (activeUser) {
+                activeUser.classList.add('active');
+                activeUser.classList.add('selected');
+            }
+        }
+
+        function displayMessage({sender, text, audio, fileUrl, fileName}) {
+            const messages = document.getElementById('messages');
+            const lastMessageBlock = messages.lastElementChild;
+            const isSameSender = lastMessageBlock && lastMessageBlock.dataset.sender === sender;
+            const timeGap = 2 * 60 * 1000;
+            const now = new Date();
+
+            let messageBlock;
+            let shouldCreateNewBlock = true;
+
+            if (isSameSender) {
+                const lastTimestamp = new Date(lastMessageBlock.dataset.timestamp || 0);
+
+                if (now - lastTimestamp < timeGap) {
+                    shouldCreateNewBlock = false;
+                    messageBlock = lastMessageBlock;
+                    messageBlock.dataset.timestamp = now.toISOString();
+                }
+            }
+
+            if (shouldCreateNewBlock) {
+                messageBlock = document.createElement('div');
+                messageBlock.className = 'message-block';
+                messageBlock.dataset.sender = sender;
+                messageBlock.dataset.timestamp = now.toISOString();
+
+                const senderInfo = document.createElement('div');
+                senderInfo.className = 'message-sender-info';
+                senderInfo.innerHTML = `<strong>${sender}</strong>`;
+
+                const timestamp = document.createElement('span');
+                timestamp.className = 'message-timestamp';
+                timestamp.textContent = formatTimestamp(now);
+                senderInfo.appendChild(timestamp);
+
+                messageBlock.appendChild(senderInfo);
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                messageBlock.appendChild(contentDiv);
+                messages.appendChild(messageBlock);
+            }
+
+            const contentDiv = messageBlock.querySelector('.message-content');
+
+            if (text) {
+                const messageText = document.createElement('p');
+                messageText.innerHTML = text; // Use innerHTML to correctly render <br> tags
+                contentDiv.appendChild(messageText);
+            }
+
+
+            if (audio) {
+                const audioElem = document.createElement('audio');
+                audioElem.src = audio;
+                audioElem.controls = true;
+                contentDiv.appendChild(audioElem);
+            }
+
+            if (fileUrl && fileName) {
+                const link = document.createElement('a');
+                link.href = fileUrl;
+                link.download = fileName;
+                link.textContent = `Download ${fileName}`;
+                contentDiv.appendChild(link);
+            }
+
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function formatTimestamp(date) {
+            const options = {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            };
+            return date.toLocaleString('en-GB', options).replace(',', '');
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const text = input.value;
+            if (selectedUser && text.trim()) {
+                const formattedText = text.replace(/\n/g, '<br>'); // Preserve line breaks
+                const message = {sender: username, text: formattedText};
+                messageHistory[selectedUser] = messageHistory[selectedUser] || [];
+                messageHistory[selectedUser].push(message);
+                displayMessage(message, true);
+                socket.emit('send_message', {sender: username, recipient: selectedUser, message: formattedText});
+                input.value = '';
+            }
+        }
+
+
+        function checkEnter(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            } else if (event.key === 'Tab') {
+                event.preventDefault();
+                const input = document.getElementById('message-input');
+                const start = input.selectionStart;
+                const end = input.selectionEnd;
+                input.value = input.value.substring(0, start) + "\t" + input.value.substring(end);
+                input.selectionStart = input.selectionEnd = start + 1;
+            }
+        }
+
+
+        socket.on('receive_message', ({ sender, message }) => {
+            const msg = { sender, text: ` ${message}` };
+            messageHistory[sender] = messageHistory[sender] || [];
+            messageHistory[sender].push(msg);
+            if (sender === selectedUser) displayMessage(msg);
+            else {
+                unreadMessages[sender] = (unreadMessages[sender] || 0) + 1;
+                updateBadge(sender);
             }
         });
-    });
 
-    // Open chat
-    function openChat(user) {
-        selectedUser = user;
-        const messages = document.getElementById('messages');
-        messages.innerHTML = '';
-        if (messageHistory[user]) {
-            messageHistory[user].forEach(msg => displayMessage(msg));
+        function sendFile() {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+
+            if (!file || !selectedUser) {
+                alert("Please select a user and choose a file.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function () {
+                const fileData = reader.result.split(',')[1];
+                socket.emit('send_file', {
+                    sender: username,
+                    recipient: selectedUser,
+                    file_name: file.name,
+                    file_type: file.type,
+                    file_data: fileData
+                });
+
+                displayFileMessage(username, file.name, fileData, file.type);
+            };
         }
-        unreadMessages[user] = 0;
-        updateBadge(user);
-        document.getElementById('input-container').style.display = 'flex';
 
-        // Remove the 'active' class from all users
-        const userListItems = document.querySelectorAll('#user-list li');
-        userListItems.forEach(item => item.classList.remove('active'));
+        function displayFileMessage(sender, fileName, fileData, fileType) {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = sender === username ? 'message-sender' : 'message-receiver';
 
-        // Add 'active' class to the selected user
-        const activeUser = [...userListItems].find(item => item.textContent.trim() === user);
-        if (activeUser) {
-            activeUser.classList.add('active');
-            activeUser.classList.add('selected'); // Add selected class to make badge blue
-        }
-    }
+            const senderName = sender === username ? "YOU" : sender;
+            const senderLabel = document.createElement('strong');
+            senderLabel.textContent = `${senderName}: `;
 
-    // Display message
-    function displayMessage({ sender, text, audio, fileUrl, fileName }) {
-        const messages = document.getElementById('messages');
-        const div = document.createElement('div');
-        div.className = sender === username ? 'message-sender' : 'message-receiver';
-        div.textContent = text;
-        if (audio) {
-            const audioElem = document.createElement('audio');
-            audioElem.src = audio;
-            audioElem.controls = true;
-            div.appendChild(audioElem);
-        }
-        if (fileUrl) {
             const link = document.createElement('a');
-            link.href = fileUrl;
+            link.href = `data:${fileType};base64,${fileData}`;
             link.download = fileName;
-            link.textContent = `Download ${fileName}`;
+            link.textContent = `📎 Download ${fileName}`;
+
+            div.appendChild(senderLabel);
             div.appendChild(link);
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
         }
-        messages.appendChild(div);
-        messages.scrollTop = messages.scrollHeight;
-    }
 
-    // Send text message
-    function sendMessage() {
-        const input = document.getElementById('message-input');
-        const text = input.value.trim();
-        if (selectedUser && text) {
-            const message = { sender: username, text: `You: ${text}` };
-            messageHistory[selectedUser] = messageHistory[selectedUser] || [];
-            messageHistory[selectedUser].push(message);
-            displayMessage(message);
-            socket.emit('send_message', { sender: username, recipient: selectedUser, message: text });
-            input.value = '';
+        function triggerFileInput() {
+            document.getElementById('file-input').click();
         }
-    }
 
-    // Handle Enter key to send message
-    function checkEnter(event) {
-        if (event.key === 'Enter') {
-            sendMessage();
-            event.preventDefault(); // Prevent form submission
-        }
-    }
-
-    // Receive text message
-    socket.on('receive_message', ({ sender, message }) => {
-        const msg = { sender, text: `${sender}: ${message}` };
-        messageHistory[sender] = messageHistory[sender] || [];
-        messageHistory[sender].push(msg);
-        if (sender === selectedUser) displayMessage(msg);
-        else {
-            unreadMessages[sender] = (unreadMessages[sender] || 0) + 1;
-            updateBadge(sender);
-        }
-    });
-
-// Function to send a file
-function sendFile() {
-    const fileInput = document.getElementById('file-input');
-    const file = fileInput.files[0];
-
-    if (!file || !selectedUser) {
-        alert("Please select a user and choose a file.");
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.readAsDataURL(file); // Read file as Base64
-    reader.onload = function () {
-        const fileData = reader.result.split(',')[1]; // Extract Base64 content
-        socket.emit('send_file', {
-            sender: username,
-            recipient: selectedUser,
-            file_name: file.name,
-            file_type: file.type,
-            file_data: fileData // Sending only Base64 content
+        socket.on('receive_file', function (data) {
+            console.log("Received file:", data);
+            displayFileMessage(data.sender, data.file_name, data.file_data, data.file_type);
         });
 
-        // Display the sent file message in chat
-        displayFileMessage(username, file.name, fileData, file.type);
-    };
-}
-
-// Function to display a file message in chat
-function displayFileMessage(sender, fileName, fileData, fileType) {
-    const messages = document.getElementById('messages');
-    const div = document.createElement('div');
-    div.className = sender === username ? 'message-sender' : 'message-receiver';
-
-    const link = document.createElement('a');
-    link.href = `data:${fileType};base64,${fileData}`;
-    link.download = fileName;
-    link.textContent = `📎 Download ${fileName}`;
-
-    div.appendChild(link);
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;
-}
-
-// Function to trigger file input
-function triggerFileInput() {
-    document.getElementById('file-input').click();
-}
-
-// Listen for incoming files
-socket.on('receive_file', function (data) {
-    console.log("Received file:", data); // Debugging log
-    displayFileMessage(data.sender, data.file_name, data.file_data, data.file_type);
-});
-
-    // Voice recording controls
-    function toggleRecording() {
-        if (!selectedUser) {
-            alert("Select a user to chat with before recording.");
-            return;
+        function toggleRecording() {
+            if (!selectedUser) {
+                alert("Select a user to chat with before recording.");
+                return;
+            }
+            if (isRecording) stopRecording();
+            else startRecording();
         }
-        if (isRecording) stopRecording();
-        else startRecording();
-    }
 
-    function startRecording() {
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            mediaRecorder.onstop = sendVoiceMessage;
-            mediaRecorder.start();
-            isRecording = true;
-            document.getElementById('record-btn').innerHTML = '<i class="fas fa-stop"></i>';
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = sendVoiceMessage;
+                mediaRecorder.start();
+                isRecording = true;
+                document.getElementById('record-btn').innerHTML = '<i class="fas fa-stop"></i>';
+            });
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            isRecording = false;
+            document.getElementById('record-btn').innerHTML = '<i class="fas fa-microphone"></i>';
+        }
+
+        function sendVoiceMessage() {
+            const audioBlob = new Blob(audioChunks);
+            const reader = new FileReader();
+            reader.onload = () => {
+                const audioBase64 = reader.result.split(',')[1];
+                const audioUrl = `data:audio/webm;base64,${audioBase64}`;
+                const message = { sender: username, text: 'You: ', audio: audioUrl };
+                messageHistory[selectedUser] = messageHistory[selectedUser] || [];
+                messageHistory[selectedUser].push(message);
+                displayMessage(message);
+                socket.emit('send_voice_message', { sender: username, recipient: selectedUser, audio_blob: audioBase64 });
+            };
+            reader.readAsDataURL(audioBlob);
+        }
+
+        socket.on('receive_voice_message', ({ sender, audio_url }) => {
+            const msg = { sender, text: `${sender}: `, audio: audio_url };
+            messageHistory[sender] = messageHistory[sender] || [];
+            messageHistory[sender].push(msg);
+            if (sender === selectedUser) displayMessage(msg);
+            else {
+                unreadMessages[sender] = (unreadMessages[sender] || 0) + 1;
+                updateBadge(sender);
+            }
         });
-    }
-
-    function stopRecording() {
-        mediaRecorder.stop();
-        isRecording = false;
-        document.getElementById('record-btn').innerHTML = '<i class="fas fa-microphone"></i>';
-    }
-
-    function sendVoiceMessage() {
-        const audioBlob = new Blob(audioChunks);
-        const reader = new FileReader();
-        reader.onload = () => {
-            const audioBase64 = reader.result.split(',')[1];
-            const audioUrl = `data:audio/webm;base64,${audioBase64}`;
-            const message = { sender: username, text: 'You: ', audio: audioUrl };
-            messageHistory[selectedUser] = messageHistory[selectedUser] || [];
-            messageHistory[selectedUser].push(message);
-            displayMessage(message);
-            socket.emit('send_voice_message', { sender: username, recipient: selectedUser, audio_blob: audioBase64 });
-        };
-        reader.readAsDataURL(audioBlob);
-    }
-
-    socket.on('receive_voice_message', ({ sender, audio_url }) => {
-        const msg = { sender, text: `${sender}: `, audio: audio_url };
-        messageHistory[sender] = messageHistory[sender] || [];
-        messageHistory[sender].push(msg);
-        if (sender === selectedUser) displayMessage(msg);
-        else {
-            unreadMessages[sender] = (unreadMessages[sender] || 0) + 1;
-            updateBadge(sender);
-        }
-    });
-</script>
+    </script>
 </body>
 </html>
