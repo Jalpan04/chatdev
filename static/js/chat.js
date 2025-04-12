@@ -1,7 +1,8 @@
 const username = "{{ username }}"; // Get the username from the template context
-const socket = io.connect(`${location.protocol}//${document.domain}:${location.port}`, {
-    query: { username: username }
+const socket = io("http://localhost:5000", {
+  transports: ["websocket"],
 });
+
 
 let selectedUser = null;
 let messageHistory = {}; // Stores message history for each user

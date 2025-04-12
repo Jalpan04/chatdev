@@ -6,340 +6,1270 @@
     <title>Chat</title>
     <link rel="stylesheet" href="/static/css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+
+        :root {
+    --accent-blue: #3b82f6; /* Tailwind blue-500, matches box-shadow */
+    --accent-violet: #7b3fe4; /* Matches your violet tones */
+    --radius-lg: 12px; /* Larger radius for rounded look */
+    --space-md: 8px; /* Matches your spacing */
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); /* Bouncy effect */
+}
+        /* Only keeping the toggle button and sidebar visibility CSS */
+        .buttons-container {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .sidebar-toggle {
+            width: 40px;
+            height: 40px;
+            background-color: #4a76a8;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .compiler-toggle {
+            width: 40px;
+            height: 40px;
+            background-color: #4a76a8;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .right-sidebar {
+            position: fixed;
+            top: 0;
+            right: -350px; /* Start off-screen */
+            width: 300px;
+            height: 100%;
+            transition: right 0.3s ease;
+            z-index: 1000;
+        }
+
+        .right-sidebar.visible {
+            right: 0; /* Slide in from right */
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.3);
+            z-index: 999;
+        }
+
+        .input-container button { /* ... */ }
+.file-button {
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-violet));
+    color: white;
+    border: none;
+    border-radius: var(--radius-lg);
+    width: 48px;
+    height: 48px;
+    margin-left: var(--space-md);
+    cursor: pointer;
+    transition: var(--transition-bounce);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.file-button::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: -100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: all 0.6s;
+}
+
+.file-button:hover {
+      transform: translateY(-4px);
+  filter: brightness(1.1);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+}
+
+.file-button:hover::after {
+  left: 100%;
+}
+
+.file-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+    </style>
 </head>
 <body>
-    <div class="container">
-        <div class="left-sidebar">
-            <h2>Welcome {{ username }}</h2>
-            <h3>Online Users</h3>
-            <ul id="user-list"></ul>
-        </div>
+<div class="container">
+    <!-- Left Sidebar -->
+    <div class="left-sidebar">
+        <h2>Welcome {{ username }}</h2>
+        <h3>Your Friends</h3>
+        <ul id="user-list">
+            {% for friend in friends %}
+            <li onclick="openChat('{{ friend }}')">{{ friend }} <span class="badge" style="display: none;"></span></li>
+            {% endfor %}
+        </ul>
 
-        <div class="right-section">
-            <div id="messages"></div>
-            <div class="input-container" id="input-container" style="display: none;">
-                <textarea id="message-input" placeholder="Type your message..." onkeydown="checkEnter(event)"></textarea>
-                <button onclick="sendMessage()">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
-                <button id="record-btn" onclick="toggleRecording()">
-                    <i class="fas fa-microphone"></i>
-                </button>
-                <button onclick="triggerFileInput()">
-                    <i class="fas fa-paperclip"></i>
-                </button>
-                <input type="file" id="file-input" onchange="sendFile()" style="display:none;">
+        <!-- Toggle Buttons Container -->
+        <div class="buttons-container">
+            <div class="compiler-toggle">
+                <i class="fas fa-code"></i>
+            </div>
+            <div class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-users"></i>
             </div>
         </div>
     </div>
 
-    <div class="audio-player">
-        <button class="play-btn" onclick="togglePlay(this)">
-            <i class="fas fa-play"></i>
+<!-- Main Chat Section -->
+<!-- Main Chat Section -->
+<div class="right-section">
+    <div class="search-wrapper">
+        <button class="search-toggle-button" id="searchToggleButton" onclick="toggleSearchBar()">
+            <i class="fas fa-search"></i>
         </button>
-        <div class="waveform" id="waveform"></div>
-        <span class="timer">00:00</span>
+        <div class="search-bar-overlay" id="searchBar" style="display: none;">
+            <input
+                type="text"
+                id="messageSearchInput"
+                class="search-messages-input"
+                placeholder="Search messages..."
+                oninput="searchMessages()"
+            >
+            <button onclick="clearMessageSearch()" class="clear-search-button" id="clearSearchButton" style="display: none;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
     </div>
-    <audio class="audio-file" src="your-audio-file.mp3"></audio>
+    <div id="messages"></div>
+    <div class="input-container" id="input-container" style="display: none;">
+        <textarea id="message-input" placeholder="Type your message" onkeydown="checkEnter(event)"></textarea>
+        <button onclick="sendMessage()">
+            <i class="fas fa-paper-plane"></i>
+        </button>
+        <button id="record-btn" onclick="toggleRecording()">
+            <i class="fas fa-microphone"></i>
+        </button>
+        <label for="file-input" class="file-button">
+            <i class="fas fa-paperclip"></i>
+        </label>
+        <input type="file" id="file-input" onchange="sendFile()" style="display: none;">
+    </div>
+</div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
-    <script>
-        const username = "{{ username }}";
-        const socket = io.connect(location.origin, { query: { username } });
-        let selectedUser = null;
-        let isRecording = false;
-        let mediaRecorder = null;
-        let audioChunks = [];
-        const messageHistory = {};
-        const unreadMessages = {};
+    <!-- Overlay for closing sidebar when clicking outside -->
+    <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 
-        // Update unread badge
-        function updateBadge(user) {
-            const userListItems = document.querySelectorAll('#user-list li');
-            const userItem = [...userListItems].find(item => item.textContent.trim().startsWith(user));
+    <!-- Right Sidebar -->
+    <aside class="right-sidebar" id="rightSidebar">
+        <!-- Search Section -->
+        <section class="search-section">
+            <h3 class="section-title">Search Users</h3>
 
-            if (userItem) {
-                const badge = userItem.querySelector('.badge') || document.createElement('span');
-                badge.className = 'badge';
-                const unreadCount = unreadMessages[user] || 0;
-                badge.textContent = unreadCount > 5 ? '5+' : unreadCount;
-                badge.style.display = unreadCount > 0 ? 'inline-block' : 'none';
-                if (!userItem.contains(badge)) userItem.appendChild(badge);
-            }
+            <div class="search-container">
+                <input
+                    type="text"
+                    id="searchInput"
+                    class="search-input"
+                    placeholder="Search for users..."
+                >
+                <button onclick="searchUsers()" class="search-button">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+
+            <ul id="searchResults" class="search-results"></ul>
+        </section>
+
+        <!-- Friend Requests Section -->
+        <section class="friend-requests">
+            <h3 class="section-title">
+                Friend Requests
+                <span id="request-count" class="badge">0</span>
+            </h3>
+
+            <div class="requests-container">
+                <ul id="friendRequests" class="requests-list"></ul>
+                <p id="no-requests" class="no-requests">No pending requests</p>
+            </div>
+        </section>
+    </aside>
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
+<script>
+
+// Add click event listener to the compiler toggle button
+document.querySelector('.compiler-toggle').addEventListener('click', function() {
+    // You can change this URL to the actual path where your compiler is located
+    window.location.href = '/compiler';
+
+    // If you need to redirect to different compiler types based on context
+    // or if you want to add a parameter to the URL, you can use:
+    // window.location.href = '/compiler?type=html'; // for HTML compiler
+    // window.location.href = '/compiler?type=python'; // for Python compiler
+});
+
+
+
+// Toggle sidebar function
+function toggleSidebar() {
+    const sidebar = document.getElementById('rightSidebar');
+    const overlay = document.getElementById('overlay');
+
+    if (sidebar.classList.contains('visible')) {
+        closeSidebar();
+    } else {
+        sidebar.classList.add('visible');
+        overlay.style.display = 'block';
+    }
+}
+
+// Close sidebar function
+function closeSidebar() {
+    const sidebar = document.getElementById('rightSidebar');
+    const overlay = document.getElementById('overlay');
+
+    sidebar.classList.remove('visible');
+    overlay.style.display = 'none';
+}
+
+// Toggle the search bar visibility
+function toggleSearchBar() {
+    const searchBar = document.getElementById('searchBar');
+    const searchInput = document.getElementById('messageSearchInput');
+    const searchButton = document.getElementById('searchToggleButton');
+    const clearButton = document.getElementById('clearSearchButton');
+
+    if (searchBar.classList.contains('active')) {
+        // Collapse the search bar
+        searchBar.classList.remove('active');
+        setTimeout(() => { searchBar.style.display = 'none'; }, 300);
+        if (searchInput.value.trim()) {
+            // Only clear and reload if a search was performed
+            clearMessageSearch();
+        } else {
+            // Reset UI without reloading messages
+            searchInput.value = '';
+            clearButton.style.display = 'none';
         }
+        searchButton.innerHTML = '<i class="fas fa-search"></i>';
+    } else {
+        // Expand the search bar
+        searchBar.style.display = 'flex';
+        setTimeout(() => { searchBar.classList.add('active'); }, 10);
+        searchInput.focus();
+        searchButton.innerHTML = '<i class="fas fa-times"></i>';
+    }
+}
 
-        // Populate online users
-        socket.on('user_list', users => {
-            const userList = document.getElementById('user-list');
-            userList.innerHTML = '';
-            users.forEach(user => {
+// Clear the search and restore the full chat
+function clearMessageSearch() {
+    const searchInput = document.getElementById('messageSearchInput');
+    const clearButton = document.getElementById('clearSearchButton');
+    const searchBar = document.getElementById('searchBar');
+    const searchButton = document.getElementById('searchToggleButton');
+
+    searchInput.value = '';
+    clearButton.style.display = 'none';
+    searchBar.classList.remove('active');
+    setTimeout(() => { searchBar.style.display = 'none'; }, 300);
+    searchButton.innerHTML = '<i class="fas fa-search"></i>';
+
+    if (selectedUser) {
+        // Reload history to clear search results
+        socket.emit('get_history', {sender: username, recipient: selectedUser});
+    } else {
+        document.getElementById('messages').innerHTML = '';
+    }
+}
+
+function searchMessages() {
+    const query = document.getElementById('messageSearchInput').value.trim();
+    const clearButton = document.getElementById('clearSearchButton');
+    clearButton.style.display = query ? 'block' : 'none';
+
+    if (!selectedUser) {
+        document.getElementById('messages').innerHTML = '';
+        return;
+    }
+
+    if (!query) {
+        socket.emit('get_history', {sender: username, recipient: selectedUser});
+        return;
+    }
+
+    socket.emit('search_messages', {
+        sender: username,
+        recipient: selectedUser,
+        query: query
+    });
+}
+
+const username = "{{ username }}";
+const socket = io.connect(location.origin, {query: {username}});
+let selectedUser = null;
+let isRecording = false;
+let mediaRecorder = null;
+let audioChunks = [];
+const messageHistory = {};
+const unreadMessages = {};
+
+// Utility Functions
+function getRecipientFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('recipient') || '';
+}
+
+function formatTimestamp(date) {
+    return date.toLocaleString('en-GB', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: true
+    }).replace(',', '');
+}
+
+function updateBadge(user) {
+    const userListItems = document.querySelectorAll('#user-list li');
+    const userItem = [...userListItems].find(item => item.textContent.trim().startsWith(user));
+    if (userItem) {
+        const badge = userItem.querySelector('.badge') || document.createElement('span');
+        badge.className = 'badge';
+        const unreadCount = unreadMessages[user] || 0;
+        badge.textContent = unreadCount > 5 ? '5+' : unreadCount;
+        badge.style.display = unreadCount > 0 ? 'inline-block' : 'none';
+        if (!userItem.contains(badge)) userItem.appendChild(badge);
+    }
+}
+
+// Friend Request Functions
+function updateRequestCount() {
+    const friendRequests = document.getElementById('friendRequests');
+    const requestCount = document.getElementById('request-count');
+    const noRequests = document.getElementById('no-requests');
+    const count = friendRequests.children.length;
+
+    requestCount.textContent = count;
+    requestCount.style.display = count > 0 ? 'inline-block' : 'none';
+    noRequests.style.display = count === 0 ? 'block' : 'none';
+
+    // Update sidebar toggle button badge
+    updateSidebarBadge(count);
+}
+
+// Function to update the sidebar toggle button badge
+function updateSidebarBadge(count) {
+    const sidebarToggle = document.querySelector('.sidebar-toggle');
+    let badge = sidebarToggle.querySelector('.sidebar-badge');
+
+    if (!badge && count > 0) {
+        badge = document.createElement('span');
+        badge.className = 'sidebar-badge';
+        badge.style.position = 'absolute';
+        badge.style.top = '-5px';
+        badge.style.right = '-5px';
+        badge.style.backgroundColor = '#ff4d4d';
+        badge.style.color = 'white';
+        badge.style.borderRadius = '50%';
+        badge.style.width = '18px';
+        badge.style.height = '18px';
+        badge.style.fontSize = '12px';
+        badge.style.display = 'flex';
+        badge.style.alignItems = 'center';
+        badge.style.justifyContent = 'center';
+        sidebarToggle.style.position = 'relative';
+        sidebarToggle.appendChild(badge);
+    } else if (badge) {
+        if (count > 0) {
+            badge.textContent = count > 5 ? '5+' : count;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+function loadFriendRequests() {
+    fetch('/get_friend_requests', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `username=${encodeURIComponent(username)}`
+    })
+        .then(response => response.json())
+        .then(data => {
+            const friendRequests = document.getElementById('friendRequests');
+            friendRequests.innerHTML = ''; // Clear existing
+            data.requests.forEach(sender => {
+                addFriendRequest(sender);
+            });
+            updateRequestCount();
+        })
+        .catch(error => {
+            console.error('Error loading friend requests:', error);
+        });
+}
+
+function searchUsers() {
+    const query = document.getElementById('searchInput').value.trim();
+    const searchResults = document.getElementById('searchResults');
+    searchResults.innerHTML = '';
+
+    if (!query) return;
+
+    fetch('/search_users', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `query=${encodeURIComponent(query)}`
+    })
+        .then(response => response.json())
+        .then(data => {
+            data.users.forEach(user => {
                 if (user !== username) {
                     const li = document.createElement('li');
                     li.textContent = user;
-                    li.onclick = () => openChat(user);
-
-                    const badge = document.createElement('span');
-                    badge.className = 'badge';
-                    badge.style.display = 'none';
-                    li.appendChild(badge);
-
-                    userList.appendChild(li);
-                    updateBadge(user);
+                    const button = document.createElement('button');
+                    button.innerHTML = '<i class="fas fa-user-plus"></i>';
+                    button.onclick = () => sendFriendRequest(user);
+                    li.appendChild(button);
+                    searchResults.appendChild(li);
                 }
             });
+        })
+        .catch(error => {
+            console.error('Error searching users:', error);
+            alert('Error searching users.');
         });
+}
 
-        // Open chat
-        function openChat(user) {
+function sendFriendRequest(recipient) {
+    fetch('/send_friend_request', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `sender=${encodeURIComponent(username)}&recipient=${encodeURIComponent(recipient)}`
+    })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message || data.error);
+            if (data.message) {
+                document.getElementById('searchInput').value = '';
+                document.getElementById('searchResults').innerHTML = '';
+            }
+        })
+        .catch(error => {
+            console.error('Error sending friend request:', error);
+            alert('Error sending friend request.');
+        });
+}
+
+function acceptFriendRequest(sender) {
+    fetch('/accept_friend_request', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `username=${encodeURIComponent(username)}&sender=${encodeURIComponent(sender)}`
+    })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            // Remove from UI
+            const requestLi = [...document.querySelectorAll('#friendRequests li')]
+                .find(li => li.querySelector('.request-user').textContent === sender);
+            if (requestLi) requestLi.remove();
+            updateRequestCount();
+            // Add to friends list
+            const userList = document.getElementById('user-list');
+            const li = document.createElement('li');
+            li.textContent = sender;
+            li.onclick = () => openChat(sender);
+            userList.appendChild(li);
+        })
+        .catch(error => {
+            console.error('Error accepting friend request:', error);
+            alert('Error accepting friend request.');
+        });
+}
+
+function rejectFriendRequest(sender) {
+    fetch('/reject_friend_request', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `username=${encodeURIComponent(username)}&sender=${encodeURIComponent(sender)}`
+    })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            const requestLi = [...document.querySelectorAll('#friendRequests li')]
+                .find(li => li.querySelector('.request-user').textContent === sender);
+            if (requestLi) requestLi.remove();
+            updateRequestCount();
+        })
+        .catch(error => {
+            console.error('Error rejecting friend request:', error);
+            alert('Error rejecting friend request.');
+        });
+}
+
+// Chat Functions
+function openChat(user) {
+    fetch(`/chat_history/${username}/${user}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('You can only chat with friends.');
+                return;
+            }
             selectedUser = user;
             const messages = document.getElementById('messages');
             messages.innerHTML = '';
-            if (messageHistory[user]) {
-                messageHistory[user].forEach(msg => displayMessage(msg));
-            }
-            unreadMessages[user] = 0;
-            updateBadge(user);
             document.getElementById('input-container').style.display = 'flex';
 
             const userListItems = document.querySelectorAll('#user-list li');
-            userListItems.forEach(item => item.classList.remove('active'));
+            userListItems.forEach(item => item.classList.remove('active', 'selected'));
+            const activeUser = [...userListItems].find(item => item.textContent.trim().startsWith(user));
+            if (activeUser) activeUser.classList.add('active', 'selected');
 
-            const activeUser = [...userListItems].find(item => item.textContent.trim() === user);
-            if (activeUser) {
-                activeUser.classList.add('active');
-                activeUser.classList.add('selected');
-            }
+            unreadMessages[user] = 0;
+            updateBadge(user);
+            window.history.pushState({}, '', `/chat/${username}?recipient=${user}`);
+            socket.emit('get_history', {sender: username, recipient: user});
+        })
+        .catch(error => {
+            console.error('Error checking friendship:', error);
+            alert('You can only chat with friends.');
+        });
+}
+
+// Helper function to infer file type from fileName (as a fallback)
+function inferFileType(fileName) {
+    const extension = fileName.split('.').pop().toLowerCase();
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'ico', 'tiff'];
+    const videoExtensions = ['mp4', 'webm', 'mov', 'avi', 'wmv', 'flv', 'mkv', 'mpeg', 'mpg', '3gp'];
+    if (imageExtensions.includes(extension)) return 'image/' + extension;
+    if (videoExtensions.includes(extension)) return 'video/' + extension;
+    return 'application/octet-stream';
+}
+
+// displayMessage function (unchanged, included for context)
+function displayMessage({sender, text, audio, fileUrl, fileName, timestamp, fileType}) {
+    if (sender !== username && sender !== selectedUser) return;
+    const messages = document.getElementById('messages');
+    const lastMessageBlock = messages.lastElementChild;
+    const isSameSender = lastMessageBlock && lastMessageBlock.dataset.sender === sender;
+    const timeGap = 2 * 60 * 1000;
+    const msgTime = timestamp ? new Date(timestamp * 1000) : new Date();
+    let messageBlock;
+    let shouldCreateNewBlock = true;
+
+    if (isSameSender) {
+        const lastTimestamp = new Date(lastMessageBlock.dataset.timestamp || 0);
+        if (msgTime - lastTimestamp < timeGap) {
+            shouldCreateNewBlock = false;
+            messageBlock = lastMessageBlock;
+            messageBlock.dataset.timestamp = msgTime.toISOString();
         }
+    }
 
-        function displayMessage({sender, text, audio, fileUrl, fileName}) {
-            const messages = document.getElementById('messages');
-            const lastMessageBlock = messages.lastElementChild;
-            const isSameSender = lastMessageBlock && lastMessageBlock.dataset.sender === sender;
-            const timeGap = 2 * 60 * 1000;
-            const now = new Date();
+    if (shouldCreateNewBlock) {
+        messageBlock = document.createElement('div');
+        messageBlock.className = 'message-block';
+        messageBlock.dataset.sender = sender;
+        messageBlock.dataset.timestamp = msgTime.toISOString();
 
-            let messageBlock;
-            let shouldCreateNewBlock = true;
+        const senderInfo = document.createElement('div');
+        senderInfo.className = 'message-sender-info';
+        senderInfo.innerHTML = `<strong>${sender}</strong>`;
+        const timestampSpan = document.createElement('span');
+        timestampSpan.className = 'message-timestamp';
+        timestampSpan.textContent = formatTimestamp(msgTime);
+        senderInfo.appendChild(timestampSpan);
 
-            if (isSameSender) {
-                const lastTimestamp = new Date(lastMessageBlock.dataset.timestamp || 0);
+        messageBlock.appendChild(senderInfo);
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+        messageBlock.appendChild(contentDiv);
+        messages.appendChild(messageBlock);
+    }
 
-                if (now - lastTimestamp < timeGap) {
-                    shouldCreateNewBlock = false;
-                    messageBlock = lastMessageBlock;
-                    messageBlock.dataset.timestamp = now.toISOString();
+    const contentDiv = messageBlock.querySelector('.message-content');
+
+    if (text) {
+        const messageText = document.createElement('p');
+        messageText.innerHTML = text;
+        contentDiv.appendChild(messageText);
+    }
+    if (audio) {
+        const audioElem = document.createElement('audio');
+        audioElem.src = audio;
+        audioElem.controls = true;
+        contentDiv.appendChild(audioElem);
+    }
+    if (fileUrl && fileName) {
+        const effectiveFileType = fileType || inferFileType(fileName);
+
+        if (effectiveFileType.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.src = fileUrl;
+            img.alt = fileName;
+            img.style.maxWidth = '250px';
+            img.style.cursor = 'pointer';
+            img.onclick = () => expandMedia(fileUrl, fileName, effectiveFileType);
+            contentDiv.appendChild(img);
+        } else if (effectiveFileType.startsWith('video/')) {
+            const video = document.createElement('video');
+            video.src = fileUrl;
+            video.controls = true;
+            video.style.maxWidth = '300px';
+            video.style.maxHeight = '200px';
+            video.onclick = () => expandMedia(fileUrl, fileName, effectiveFileType);
+            contentDiv.appendChild(video);
+            const videoLink = document.createElement('a');
+            videoLink.href = fileUrl;
+            videoLink.target = '_blank';
+            videoLink.textContent = 'Open video in new tab';
+            videoLink.style.display = 'block';
+            videoLink.style.marginTop = '5px';
+            contentDiv.appendChild(videoLink);
+        } else {
+            const fileLink = document.createElement('a');
+            fileLink.href = fileUrl;
+            fileLink.download = fileName;
+            let icon = '📄';
+            if (effectiveFileType.includes('pdf')) icon = '📑';
+            else if (effectiveFileType.includes('zip') || effectiveFileType.includes('rar')) icon = '🗜️';
+            else if (effectiveFileType.includes('audio')) icon = '🔊';
+            else if (effectiveFileType.includes('text')) icon = '📝';
+            fileLink.innerHTML = `${icon} Download ${fileName}`;
+            contentDiv.appendChild(fileLink);
+        }
+    }
+
+    messages.scrollTop = messages.scrollHeight;
+}
+
+
+function sendMessage() {
+    const input = document.getElementById('message-input');
+    const text = input.value.trim();
+    if (!selectedUser) {
+        alert('Please select a friend to chat with.');
+        return;
+    }
+    if (text) {
+        fetch(`/chat_history/${username}/${selectedUser}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('You can only chat with friends.');
+                    return;
                 }
-            }
-
-            if (shouldCreateNewBlock) {
-                messageBlock = document.createElement('div');
-                messageBlock.className = 'message-block';
-                messageBlock.dataset.sender = sender;
-                messageBlock.dataset.timestamp = now.toISOString();
-
-                const senderInfo = document.createElement('div');
-                senderInfo.className = 'message-sender-info';
-                senderInfo.innerHTML = `<strong>${sender}</strong>`;
-
-                const timestamp = document.createElement('span');
-                timestamp.className = 'message-timestamp';
-                timestamp.textContent = formatTimestamp(now);
-                senderInfo.appendChild(timestamp);
-
-                messageBlock.appendChild(senderInfo);
-
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'message-content';
-                messageBlock.appendChild(contentDiv);
-                messages.appendChild(messageBlock);
-            }
-
-            const contentDiv = messageBlock.querySelector('.message-content');
-
-            if (text) {
-                const messageText = document.createElement('p');
-                messageText.innerHTML = text; // Use innerHTML to correctly render <br> tags
-                contentDiv.appendChild(messageText);
-            }
-
-
-            if (audio) {
-                const audioElem = document.createElement('audio');
-                audioElem.src = audio;
-                audioElem.controls = true;
-                contentDiv.appendChild(audioElem);
-            }
-
-            if (fileUrl && fileName) {
-                const link = document.createElement('a');
-                link.href = fileUrl;
-                link.download = fileName;
-                link.textContent = `Download ${fileName}`;
-                contentDiv.appendChild(link);
-            }
-
-            messages.scrollTop = messages.scrollHeight;
-        }
-
-        function formatTimestamp(date) {
-            const options = {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            };
-            return date.toLocaleString('en-GB', options).replace(',', '');
-        }
-
-        function sendMessage() {
-            const input = document.getElementById('message-input');
-            const text = input.value;
-            if (selectedUser && text.trim()) {
-                const formattedText = text.replace(/\n/g, '<br>'); // Preserve line breaks
-                const message = {sender: username, text: formattedText};
+                const message = {sender: username, text: `You: ${text}`, timestamp: Date.now() / 1000};
                 messageHistory[selectedUser] = messageHistory[selectedUser] || [];
                 messageHistory[selectedUser].push(message);
-                displayMessage(message, true);
-                socket.emit('send_message', {sender: username, recipient: selectedUser, message: formattedText});
+                displayMessage(message);
+                socket.emit('send_message', {sender: username, recipient: selectedUser, message: text});
                 input.value = '';
-            }
-        }
+            })
+            .catch(error => {
+                console.error('Error checking friendship:', error);
+                alert('You can only chat with friends.');
+            });
+    }
+}
 
+function checkEnter(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        sendMessage();
+        event.preventDefault();
+    }
+}
 
-        function checkEnter(event) {
-            if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                sendMessage();
-            } else if (event.key === 'Tab') {
-                event.preventDefault();
-                const input = document.getElementById('message-input');
-                const start = input.selectionStart;
-                const end = input.selectionEnd;
-                input.value = input.value.substring(0, start) + "\t" + input.value.substring(end);
-                input.selectionStart = input.selectionEnd = start + 1;
-            }
-        }
+// First, modify the sendFile function to properly handle responses
+function sendFile() {
+    const fileInput = document.getElementById('file-input');
+    const file = fileInput.files[0];
+    if (!file || !selectedUser) {
+        alert("Please select a friend and choose a file.");
+        return;
+    }
 
-
-        socket.on('receive_message', ({ sender, message }) => {
-            const msg = { sender, text: ` ${message}` };
-            messageHistory[sender] = messageHistory[sender] || [];
-            messageHistory[sender].push(msg);
-            if (sender === selectedUser) displayMessage(msg);
-            else {
-                unreadMessages[sender] = (unreadMessages[sender] || 0) + 1;
-                updateBadge(sender);
-            }
-        });
-
-        function sendFile() {
-            const fileInput = document.getElementById('file-input');
-            const file = fileInput.files[0];
-
-            if (!file || !selectedUser) {
-                alert("Please select a user and choose a file.");
+    fetch(`/chat_history/${username}/${selectedUser}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('You can only send files to friends.');
                 return;
             }
 
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = function () {
-                const fileData = reader.result.split(',')[1];
-                socket.emit('send_file', {
-                    sender: username,
-                    recipient: selectedUser,
-                    file_name: file.name,
-                    file_type: file.type,
-                    file_data: fileData
-                });
-
-                displayFileMessage(username, file.name, fileData, file.type);
-            };
-        }
-
-        function displayFileMessage(sender, fileName, fileData, fileType) {
+            const loadingId = `loading-${Date.now()}`;
             const messages = document.getElementById('messages');
-            const div = document.createElement('div');
-            div.className = sender === username ? 'message-sender' : 'message-receiver';
-
-            const senderName = sender === username ? "YOU" : sender;
-            const senderLabel = document.createElement('strong');
-            senderLabel.textContent = `${senderName}: `;
-
-            const link = document.createElement('a');
-            link.href = `data:${fileType};base64,${fileData}`;
-            link.download = fileName;
-            link.textContent = `📎 Download ${fileName}`;
-
-            div.appendChild(senderLabel);
-            div.appendChild(link);
-            messages.appendChild(div);
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = loadingId;
+            loadingDiv.className = 'message-block';
+            loadingDiv.dataset.sender = username;
+            loadingDiv.dataset.timestamp = new Date().toISOString();
+            const senderInfo = document.createElement('div');
+            senderInfo.className = 'message-sender-info';
+            senderInfo.innerHTML = `<strong>${username}</strong>`;
+            const timestampSpan = document.createElement('span');
+            timestampSpan.className = 'message-timestamp';
+            timestampSpan.textContent = formatTimestamp(new Date());
+            senderInfo.appendChild(timestampSpan);
+            loadingDiv.appendChild(senderInfo);
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.innerHTML = `<p>Sending ${file.name}...</p><div class="loading-spinner"></div>`;
+            contentDiv.innerHTML = `<p>Sending ${file.name}... <span id="progress-${loadingId}">0%</span></p><div class="loading-spinner"></div>`;
+                socket.on('chunk_received', ({ chunk_index, total_chunks, file_name, loading_id: chunkLoadingId }) => {
+                    if (chunkLoadingId === loadingId) {
+                        const progress = Math.round(((chunk_index + 1) / total_chunks) * 100);
+                        const progressSpan = document.getElementById(`progress-${loadingId}`);
+                    if (progressSpan) progressSpan.textContent = `${progress}%`;
+                    }
+                });
+            loadingDiv.appendChild(contentDiv);
+            messages.appendChild(loadingDiv);
             messages.scrollTop = messages.scrollHeight;
-        }
 
-        function triggerFileInput() {
-            document.getElementById('file-input').click();
-        }
+            const chunkSize = 5 * 1024 * 1024; // 5MB chunks
+            const totalChunks = Math.ceil(file.size / chunkSize);
+            let chunkIndex = 0;
 
-        socket.on('receive_file', function (data) {
-            console.log("Received file:", data);
-            displayFileMessage(data.sender, data.file_name, data.file_data, data.file_type);
+            function sendChunk() {
+                if (chunkIndex >= totalChunks) return;
+                const start = chunkIndex * chunkSize;
+                const end = Math.min(start + chunkSize, file.size);
+                const chunk = file.slice(start, end);
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const fileData = reader.result.split(',')[1];
+                    socket.emit('send_file_chunk', {
+                        sender: username,
+                        recipient: selectedUser,
+                        file_name: file.name,
+                        file_type: file.type,
+                        file_data: fileData,
+                        chunk_index: chunkIndex,
+                        total_chunks: totalChunks,
+                        loading_id: loadingId
+                    });
+                    chunkIndex++;
+                    sendChunk();
+                };
+                reader.readAsDataURL(chunk);
+            }
+            sendChunk();
+        })
+        .catch(error => {
+            console.error('Error checking friendship:', error);
+            alert('You can only send files to friends.');
         });
+}
 
-        function toggleRecording() {
-            if (!selectedUser) {
-                alert("Select a user to chat with before recording.");
+socket.on('chunk_received', ({ chunk_index, total_chunks, file_name, loading_id }) => {
+    console.log(`Chunk ${chunk_index + 1}/${total_chunks} received for ${file_name}`);
+});
+
+// Add the file_sent event handler to the socket events
+socket.on('file_sent', function(data) {
+    console.log("File sent successfully:", data);
+
+    // Remove the loading indicator if it exists
+    if (data.loading_id) {
+        const loadingElement = document.getElementById(data.loading_id);
+        if (loadingElement) {
+            loadingElement.remove();
+        }
+    }
+
+    // Create a message block for the sent file
+    const messages = document.getElementById('messages');
+    const messageBlock = document.createElement('div');
+    messageBlock.className = 'message-block';
+    messageBlock.dataset.sender = username;
+    messageBlock.dataset.timestamp = new Date().toISOString();
+
+    // Create sender info
+    const senderInfo = document.createElement('div');
+    senderInfo.className = 'message-sender-info';
+    senderInfo.innerHTML = `<strong>${username}</strong>`;
+    const timestampSpan = document.createElement('span');
+    timestampSpan.className = 'message-timestamp';
+    timestampSpan.textContent = formatTimestamp(new Date());
+    senderInfo.appendChild(timestampSpan);
+    messageBlock.appendChild(senderInfo);
+
+    // Create content container
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+
+    // Handle different file types
+    if (data.file_type.startsWith('image/')) {
+        // For images
+        const img = document.createElement('img');
+        img.src = data.file_url;
+        img.alt = data.file_name;
+        img.style.maxWidth = '250px';
+        img.style.cursor = 'pointer';
+        img.onclick = () => window.open(data.file_url, '_blank');
+        contentDiv.appendChild(img);
+    } else if (data.file_type.startsWith('video/') || data.is_video) {
+        // For videos
+        const video = document.createElement('video');
+        video.src = data.file_url;
+        video.controls = true;
+        video.style.maxWidth = '300px';
+        video.style.maxHeight = '200px';
+        contentDiv.appendChild(video);
+
+        // Add a direct link below video for download/opening in new tab
+        const videoLink = document.createElement('a');
+        videoLink.href = data.file_url;
+        videoLink.target = '_blank';
+        videoLink.textContent = 'Open video in new tab';
+        videoLink.style.display = 'block';
+        videoLink.style.marginTop = '5px';
+        contentDiv.appendChild(videoLink);
+    } else {
+        // For other files (documents, etc.)
+        const fileLink = document.createElement('a');
+        fileLink.href = data.file_url;
+        fileLink.download = data.file_name;
+
+        // Add appropriate icon based on file type
+        let icon = '📄';
+        if (data.file_type.includes('pdf')) icon = '📑';
+        else if (data.file_type.includes('zip') || data.file_type.includes('rar')) icon = '🗜️';
+        else if (data.file_type.includes('audio')) icon = '🔊';
+        else if (data.file_type.includes('text')) icon = '📝';
+
+        fileLink.innerHTML = `${icon} Download ${data.file_name}`;
+        contentDiv.appendChild(fileLink);
+    }
+
+    messageBlock.appendChild(contentDiv);
+    messages.appendChild(messageBlock);
+    messages.scrollTop = messages.scrollHeight;
+
+    // Clear the file input
+    document.getElementById('file-input').value = '';
+});
+
+function displayFileMessage(sender, fileName, fileData, fileType) {
+    const messages = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = sender === username ? 'message-sender' : 'message-receiver';
+    const senderName = document.createElement('p');
+    senderName.textContent = sender === username ? "You: " : sender;
+    senderName.style.marginBottom = "5px";
+    div.appendChild(senderName);
+
+    if (fileType.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = `data:${fileType};base64,${fileData}`;
+        img.style.width = '100px';
+        img.style.cursor = 'pointer';
+        img.onclick = () => expandMedia(img.src, fileName, fileType, fileData);
+        div.appendChild(img);
+    } else if (fileType.startsWith('video/')) {
+        const video = document.createElement('video');
+        video.src = `data:${fileType};base64,${fileData}`;
+        video.controls = true;
+        video.style.width = '150px';
+        video.onclick = () => expandMedia(video.src, fileName, fileType, fileData);
+        div.appendChild(video);
+    } else {
+        const fileLink = document.createElement('a');
+        fileLink.href = `data:${fileType};base64,${fileData}`;
+        fileLink.download = fileName;
+        fileLink.textContent = `📎 Download ${fileName}`;
+        div.appendChild(fileLink);
+    }
+
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+}
+
+function expandMedia(src, fileName, fileType) {
+    const expanded = document.createElement("div");
+    expanded.classList.add("expanded");
+
+    const closeBtn = document.createElement("span");
+    closeBtn.classList.add("close-btn");
+    closeBtn.innerHTML = "×";
+    closeBtn.onclick = (e) => {
+        e.stopPropagation(); // Prevent click from bubbling to expanded div
+        expanded.remove();
+    };
+    expanded.appendChild(closeBtn);
+
+    const mediaContainer = document.createElement("div");
+    mediaContainer.classList.add("media-container");
+
+    if (fileType.startsWith('image/')) {
+        const img = document.createElement("img");
+        img.src = src;
+        img.classList.add("expanded-media");
+        img.onload = () => {
+            // Ensure layout adjusts after image loads
+            mediaContainer.style.width = 'auto';
+            mediaContainer.style.height = 'auto';
+        };
+        mediaContainer.appendChild(img);
+    } else if (fileType.startsWith('video/')) {
+        const video = document.createElement("video");
+        video.src = src;
+        video.controls = true;
+        video.autoplay = true;
+        video.classList.add("expanded-media");
+        video.onloadedmetadata = () => {
+            // Ensure layout adjusts after video metadata loads
+            mediaContainer.style.width = 'auto';
+            mediaContainer.style.height = 'auto';
+        };
+        mediaContainer.appendChild(video);
+    }
+
+    const downloadBtn = document.createElement("button");
+    downloadBtn.classList.add("download-btn");
+    downloadBtn.innerHTML = '<i class="fas fa-download"></i> Download';
+    downloadBtn.onclick = (e) => {
+        e.stopPropagation(); // Prevent click from closing the expanded view
+        const link = document.createElement('a');
+        link.href = src;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+    mediaContainer.appendChild(downloadBtn);
+
+    expanded.appendChild(mediaContainer);
+    document.body.appendChild(expanded);
+
+    expanded.addEventListener("click", (e) => {
+        if (e.target === expanded) expanded.remove();
+    });
+
+    document.addEventListener("keydown", function escClose(event) {
+        if (event.key === "Escape") {
+            expanded.remove();
+            document.removeEventListener("keydown", escClose);
+        }
+    });
+}
+
+function downloadFile(fileName, fileType, fileData) {
+    const link = document.createElement('a');
+    link.href = `data:${fileType};base64,${fileData}`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function toggleRecording() {
+    if (!selectedUser) {
+        alert("Please select a friend to chat with.");
+        return;
+    }
+    fetch(`/chat_history/${username}/${selectedUser}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('You can only send voice messages to friends.');
                 return;
             }
             if (isRecording) stopRecording();
             else startRecording();
-        }
-
-        function startRecording() {
-            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                mediaRecorder.onstop = sendVoiceMessage;
-                mediaRecorder.start();
-                isRecording = true;
-                document.getElementById('record-btn').innerHTML = '<i class="fas fa-stop"></i>';
-            });
-        }
-
-        function stopRecording() {
-            mediaRecorder.stop();
-            isRecording = false;
-            document.getElementById('record-btn').innerHTML = '<i class="fas fa-microphone"></i>';
-        }
-
-        function sendVoiceMessage() {
-            const audioBlob = new Blob(audioChunks);
-            const reader = new FileReader();
-            reader.onload = () => {
-                const audioBase64 = reader.result.split(',')[1];
-                const audioUrl = `data:audio/webm;base64,${audioBase64}`;
-                const message = { sender: username, text: 'You: ', audio: audioUrl };
-                messageHistory[selectedUser] = messageHistory[selectedUser] || [];
-                messageHistory[selectedUser].push(message);
-                displayMessage(message);
-                socket.emit('send_voice_message', { sender: username, recipient: selectedUser, audio_blob: audioBase64 });
-            };
-            reader.readAsDataURL(audioBlob);
-        }
-
-        socket.on('receive_voice_message', ({ sender, audio_url }) => {
-            const msg = { sender, text: `${sender}: `, audio: audio_url };
-            messageHistory[sender] = messageHistory[sender] || [];
-            messageHistory[sender].push(msg);
-            if (sender === selectedUser) displayMessage(msg);
-            else {
-                unreadMessages[sender] = (unreadMessages[sender] || 0) + 1;
-                updateBadge(sender);
-            }
+        })
+        .catch(error => {
+            console.error('Error checking friendship:', error);
+            alert('You can only send voice messages to friends.');
         });
-    </script>
+}
+
+function startRecording() {
+    navigator.mediaDevices.getUserMedia({audio: true}).then(stream => {
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = sendVoiceMessage;
+        mediaRecorder.start();
+        isRecording = true;
+        document.getElementById('record-btn').innerHTML = '<i class="fas fa-stop"></i>';
+    });
+}
+
+function stopRecording() {
+    mediaRecorder.stop();
+    isRecording = false;
+    document.getElementById('record-btn').innerHTML = '<i class="fas fa-microphone"></i>';
+}
+
+function sendVoiceMessage() {
+    const audioBlob = new Blob(audioChunks);
+    const reader = new FileReader();
+    reader.onload = () => {
+        const audioBase64 = reader.result.split(',')[1];
+        const audioUrl = `data:audio/webm;base64,${audioBase64}`;
+        const message = {sender: username, text: 'You: ', audio: audioUrl, timestamp: Date.now() / 1000};
+        messageHistory[selectedUser] = messageHistory[selectedUser] || [];
+        messageHistory[selectedUser].push(message);
+        displayMessage(message);
+        socket.emit('send_voice_message', {sender: username, recipient: selectedUser, audio_blob: audioBase64});
+    };
+    reader.readAsDataURL(audioBlob);
+}
+
+// Socket Events
+socket.on('user_list', users => {
+    const userListItems = document.querySelectorAll('#user-list li');
+    userListItems.forEach(item => {
+        const user = item.textContent.trim().split(' ')[0];
+        if (users.includes(user)) {
+            item.classList.add('online');
+        } else {
+            item.classList.remove('online');
+        }
+        updateBadge(user);
+    });
+});
+
+// Update load_history to include fileType
+socket.on('load_history', ({messages, voice_messages, file_messages}) => {
+    const allMessages = [
+        ...messages.map(msg => ({
+            type: 'text',
+            sender: msg.sender,
+            text: `${msg.sender}: ${msg.message}`,
+            timestamp: msg.timestamp
+        })),
+        ...voice_messages.map(msg => ({
+            type: 'voice',
+            sender: msg.sender,
+            audio: msg.audio_url,
+            timestamp: msg.timestamp
+        })),
+        ...file_messages.map(msg => ({
+            type: 'file',
+            sender: msg.sender,
+            fileUrl: msg.file_url,
+            fileName: msg.file_name,
+            timestamp: msg.timestamp,
+            fileType: msg.file_type // Include file_type from database
+        }))
+    ].sort((a, b) => a.timestamp - b.timestamp);
+
+    messageHistory[selectedUser] = allMessages;
+    if (selectedUser) allMessages.forEach(msg => displayMessage(msg));
+});
+
+socket.on('receive_message', ({sender, message}) => {
+    const msg = {sender, text: `${sender}: ${message}`, timestamp: Date.now() / 1000};
+    messageHistory[sender] = messageHistory[sender] || [];
+    messageHistory[sender].push(msg);
+    if (sender === selectedUser) displayMessage(msg);
+    else {
+        unreadMessages[sender] = (unreadMessages[sender] || 0) + 1;
+        updateBadge(sender);
+    }
+});
+
+// Replace the file receiving handler
+socket.on('receive_file', function(data) {
+    console.log("Received file:", data.file_name, "Type:", data.file_type);
+
+    const messages = document.getElementById('messages');
+    const messageBlock = document.createElement('div');
+    messageBlock.className = 'message-block';
+    messageBlock.dataset.sender = data.sender;
+    messageBlock.dataset.timestamp = new Date().toISOString();
+
+    // Create sender info
+    const senderInfo = document.createElement('div');
+    senderInfo.className = 'message-sender-info';
+    senderInfo.innerHTML = `<strong>${data.sender}</strong>`;
+    const timestampSpan = document.createElement('span');
+    timestampSpan.className = 'message-timestamp';
+    timestampSpan.textContent = formatTimestamp(new Date());
+    senderInfo.appendChild(timestampSpan);
+
+    messageBlock.appendChild(senderInfo);
+
+    // Create content container
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+
+    // Handle different file types
+    if (data.file_type.startsWith('image/')) {
+        // For images
+        const img = document.createElement('img');
+        img.src = data.file_url;
+        img.alt = data.file_name;
+        img.style.maxWidth = '250px';
+        img.style.cursor = 'pointer';
+        img.onclick = () => window.open(data.file_url, '_blank');
+        contentDiv.appendChild(img);
+    } else if (data.file_type.startsWith('video/')) {
+        // For videos
+        const video = document.createElement('video');
+        video.src = data.file_url;
+        video.controls = true;
+        video.style.maxWidth = '300px';
+        video.style.maxHeight = '200px';
+        contentDiv.appendChild(video);
+
+        // Add a direct link below video for download/opening in new tab
+        const videoLink = document.createElement('a');
+        videoLink.href = data.file_url;
+        videoLink.target = '_blank';
+        videoLink.textContent = 'Open video in new tab';
+        videoLink.style.display = 'block';
+        videoLink.style.marginTop = '5px';
+        contentDiv.appendChild(videoLink);
+    } else {
+        // For other files (documents, etc.)
+        const fileLink = document.createElement('a');
+        fileLink.href = data.file_url;
+        fileLink.download = data.file_name;
+
+        // Add appropriate icon based on file type
+        let icon = '📄';
+        if (data.file_type.includes('pdf')) icon = '📑';
+        else if (data.file_type.includes('zip') || data.file_type.includes('rar')) icon = '🗜️';
+        else if (data.file_type.includes('audio')) icon = '🔊';
+        else if (data.file_type.includes('text')) icon = '📝';
+
+        fileLink.innerHTML = `${icon} Download ${data.file_name}`;
+        contentDiv.appendChild(fileLink);
+    }
+
+    messageBlock.appendChild(contentDiv);
+    messages.appendChild(messageBlock);
+
+    // Mark as unread if from someone else and not the active chat
+    if (data.sender !== username && data.sender !== selectedUser) {
+        unreadMessages[data.sender] = (unreadMessages[data.sender] || 0) + 1;
+        updateBadge(data.sender);
+    }
+
+    messages.scrollTop = messages.scrollHeight;
+});
+
+socket.on('receive_voice_message', ({sender, audio_url}) => {
+    const msg = {sender, text: `${sender}: `, audio: audio_url, timestamp: Date.now() / 1000};
+    messageHistory[sender] = messageHistory[sender] || [];
+    messageHistory[sender].push(msg);
+    if (sender === selectedUser) displayMessage(msg);
+    else {
+        unreadMessages[sender] = (unreadMessages[sender] || 0) + 1;
+        updateBadge(sender);
+    }
+});
+
+// Handle search results
+socket.on('search_results', ({messages, voice_messages, file_messages}) => {
+    const messagesDiv = document.getElementById('messages');
+    messagesDiv.innerHTML = ''; // Clear current messages
+
+    const allMessages = [
+        ...messages.map(msg => ({
+            type: 'text',
+            sender: msg.sender,
+            text: msg.message,
+            timestamp: msg.timestamp
+        })),
+        ...voice_messages.map(msg => ({
+            type: 'voice',
+            sender: msg.sender,
+            audio: msg.audio_url,
+            timestamp: msg.timestamp
+        })),
+        ...file_messages.map(msg => ({
+            type: 'file',
+            sender: msg.sender,
+            fileUrl: msg.file_url,
+            fileName: msg.file_name,
+            timestamp: msg.timestamp,
+            fileType: msg.file_type
+        }))
+    ].sort((a, b) => a.timestamp - b.timestamp);
+
+    if (allMessages.length === 0) {
+        messagesDiv.innerHTML = '<p class="no-results">No messages found.</p>';
+        return;
+    }
+
+    allMessages.forEach(msg => {
+        // Add search-result class to message blocks
+        const originalClassName = 'message-block';
+        msg.className = 'message-block search-result';
+        displayMessage(msg);
+        // Restore original className for subsequent calls
+        msg.className = originalClassName;
+    });
+});
+
+function addFriendRequest(sender) {
+    const friendRequests = document.getElementById('friendRequests');
+    // Avoid duplicates
+    if ([...friendRequests.children].some(li => li.querySelector('.request-user')?.textContent === sender)) {
+        return;
+    }
+    const li = document.createElement('li');
+    li.innerHTML = `
+        <span class="request-user">${sender}</span>
+        <div class="request-actions">
+            <button class="accept-btn" title="Accept request">
+                <i class="fas fa-check"></i>
+            </button>
+            <button class="reject-btn" title="Reject request">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    li.querySelector('.accept-btn').onclick = () => acceptFriendRequest(sender);
+    li.querySelector('.reject-btn').onclick = () => rejectFriendRequest(sender);
+    friendRequests.appendChild(li);
+    updateRequestCount();
+}
+
+socket.on('receive_friend_request', data => {
+    addFriendRequest(data.sender);
+});
+
+// Initialize friend requests on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadFriendRequests();
+
+    // Open chat with recipient from URL if provided
+    const recipient = getRecipientFromURL();
+    if (recipient) {
+        openChat(recipient);
+    }
+});
+</script>
 </body>
 </html>

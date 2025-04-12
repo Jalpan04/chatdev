@@ -1,133 +1,279 @@
 /* Global Styles */
 body {
-    background-color: black;
-    color: white;
-    font-family: Arial, sans-serif;
-    font-size: 10px;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    margin: 0;
-    overflow: hidden; /* Prevent scrollbars if animations go outside the viewport */
+    font-family: 'Inter', sans-serif;
+    color: #f0f0f0;
+    background-color: #0f172a;
+    position: relative;
+    overflow: hidden;
 }
 
-/* Semi-circle Animations */
-body::before,
-body::after {
-    content: "";
-    position: absolute;
-    width: 150px; /* Adjust size as needed */
-    height: 150px; /* Adjust size as needed */
-    border-radius: 50%;
-    background-color: blue;
-    z-index: 0;
-    animation: move-circle 6s infinite linear; /* Loop animation */
-}
-
+/* Create a dynamic background with pseudo-elements */
 body::before {
-    top: -150px;
-    left: -150px;
-    animation-name: move-circle-top-left; /* Animation for the top-left corner */
-    animation-delay: 0s; /* Start immediately */
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at center, transparent 0%, #0f172a 70%),
+                linear-gradient(45deg, rgba(76, 29, 149, 0.1) 0%, transparent 70%),
+                linear-gradient(135deg, rgba(14, 165, 233, 0.15) 0%, transparent 70%);
+    animation: rotate 30s linear infinite;
+    z-index: -2;
 }
 
 body::after {
-    bottom: -150px;
-    right: -150px;
-    animation-name: move-circle-bottom-right; /* Animation for the bottom-right corner */
-    animation-delay: 3s; /* Staggered animation */
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse at 80% 20%, rgba(56, 189, 248, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 20% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
+    z-index: -1;
 }
 
-/* Keyframe Animation for Top-Left Corner */
-@keyframes move-circle-top-left {
-    0% {
-        transform: translate(0, 0) scale(1); /* Start at the top-left */
-        opacity: 0; /* Invisible */
-    }
-    10% {
-        opacity: 1; /* Fade in */
-    }
-    50% {
-        transform: translate(100px, 100px) scale(1.2); /* Move inward and grow slightly */
-    }
-    90% {
-        opacity: 1; /* Fully visible */
-    }
-    100% {
-        transform: translate(200px, 200px) scale(0.8); /* Exit to the center and shrink */
-        opacity: 0; /* Fade out */
-    }
+/* Floating particle elements */
+.particle {
+    position: fixed;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    animation: float 15s infinite ease-in-out;
+    pointer-events: none;
 }
 
-/* Keyframe Animation for Bottom-Right Corner */
-@keyframes move-circle-bottom-right {
-    0% {
-        transform: translate(0, 0) scale(1); /* Start at the bottom-right */
-        opacity: 0; /* Invisible */
-    }
-    10% {
-        opacity: 1; /* Fade in */
-    }
-    50% {
-        transform: translate(-100px, -100px) scale(1.2); /* Move inward and grow slightly */
-    }
-    90% {
-        opacity: 1; /* Fully visible */
-    }
-    100% {
-        transform: translate(-200px, -200px) scale(0.8); /* Exit to the center and shrink */
-        opacity: 0; /* Fade out */
-    }
+.particle:nth-child(1) {
+    width: 80px;
+    height: 80px;
+    top: 10%;
+    left: 10%;
+    animation-delay: 0s;
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.05), transparent);
+}
+
+.particle:nth-child(2) {
+    width: 120px;
+    height: 120px;
+    top: 70%;
+    left: 80%;
+    animation-delay: -5s;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), transparent);
+}
+
+.particle:nth-child(3) {
+    width: 60px;
+    height: 60px;
+    top: 40%;
+    left: 30%;
+    animation-delay: -2s;
+    background: linear-gradient(135deg, rgba(236, 72, 153, 0.05), transparent);
+}
+
+.particle:nth-child(4) {
+    width: 100px;
+    height: 100px;
+    top: 20%;
+    left: 70%;
+    animation-delay: -7s;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), transparent);
+}
+
+.particle:nth-child(5) {
+    width: 70px;
+    height: 70px;
+    top: 80%;
+    left: 20%;
+    animation-delay: -3s;
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.05), transparent);
 }
 
 /* Login Container */
 .login-container {
+    background: rgba(30, 41, 59, 0.7);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(8px);
+    padding: 40px;
+    width: 380px;
     text-align: center;
-    background-color: #353935;
-    padding: 2.5rem; /* Converted to rem for better scalability */
-    border-radius: 15px;
-    width: 350px;
-    height: 350px;
+    z-index: 1;
     position: relative;
-    z-index: 1; /* Ensure it appears above the animations */
+    animation: container-appear 0.8s cubic-bezier(0.17, 0.67, 0.83, 0.67) forwards;
+    opacity: 0;
+    transform: translateY(20px);
+    border: 1px solid rgba(56, 189, 248, 0.2);
 }
 
 /* Header Styles */
 h1 {
-    margin-bottom: 1.35rem; /* Converted to rem for consistency */
+    margin-bottom: 30px;
+    font-size: 2.2rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    letter-spacing: -0.03em;
+    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.3));
+    position: relative;
+}
+
+h1::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -6px;
+    width: 40px;
+    height: 3px;
+    background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc);
+    border-radius: 3px;
+}
+
+/* Form Styles */
+form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 /* Input Field Styles */
 form input[type="text"],
 form input[type="email"],
 form input[type="password"] {
-    width: 75%;
-    padding: 0.625rem; /* Converted to rem for better responsiveness */
-    margin: 0.625rem 0; /* Consistent spacing around the input */
-    border-radius: 5px;
-    font-size: 1rem; /* Using rem for font size */
+    width: 85%;
+    padding: 16px;
+    margin: 10px 0;
+    border-radius: 12px;
+    font-size: 1rem;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    color: #e2e8f0;
+    transition: all 0.3s ease;
     outline: none;
-    transition: border 0.1s;
+    box-sizing: border-box;
 }
 
 form input[type="text"]:focus,
 form input[type="password"]:focus,
 form input[type="email"]:focus {
-    border-color: #2323ff;
-    border-inline: 3px solid #2323ff;
-    writing-mode: horizontal-tb;
-    border-width: 5px;
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    background: rgba(15, 23, 42, 0.8);
+}
+
+form input::placeholder {
+    color: rgba(226, 232, 240, 0.5);
 }
 
 /* Button Styles */
 form button {
-    background-color: #2323ff;
+    background: linear-gradient(45deg, #38bdf8, #818cf8, #c084fc);
     color: white;
     border: none;
-    padding: 0.625rem 1.25rem; /* Consistent padding using rem */
-    border-radius: 10px;
-    font-size: 1rem; /* Font size in rem for scalability */
+    padding: 16px 32px;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 500;
     cursor: pointer;
-    margin-top: 10px;
+    margin-top: 20px;
+    width: 85%;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    letter-spacing: 0.03em;
+}
+
+form button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: all 0.6s ease;
+}
+
+form button:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(56, 189, 248, 0.4);
+    background: linear-gradient(45deg, #0ea5e9, #6366f1, #a855f7);
+}
+
+form button:hover::before {
+    left: 100%;
+}
+
+/* Optional: Login link at bottom */
+.login-link {
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: rgba(226, 232, 240, 0.7);
+}
+
+.login-link a {
+    color: #38bdf8;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.login-link a:hover {
+    color: #c084fc;
+    text-decoration: underline;
+}
+
+/* Animations */
+@keyframes rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-20px) rotate(10deg);
+    }
+}
+
+@keyframes container-appear {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .login-container {
+        width: 90%;
+        padding: 30px 20px;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    form input[type="text"],
+    form input[type="email"],
+    form input[type="password"],
+    form button {
+        width: 100%;
+    }
 }

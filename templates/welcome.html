@@ -2,27 +2,59 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChatDEVs</title>
-    <link rel = "stylesheet" href ="/static/css/welcome.css">
-    <style>
-
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/welcome.css">
 </head>
 <body>
-<div class = "welcome">
+<!-- Floating particles for dynamic background effect -->
+<div class="particle"></div>
+<div class="particle"></div>
+<div class="particle"></div>
+<div class="particle"></div>
+<div class="particle"></div>
+
+<div class="welcome">
     <p>Welcome To ChatDEVs</p>
 </div>
+
 <div class="message">
-    <p>
-        ChatDevs is a social platform that connects developers worldwide through real-time messaging.
-        The platform enables coders to share knowledge, solve problems together,
-        and build professional relationships through both private chats and public discussions.
-        Whether seeking technical help or casual networking, ChatDevs provides a space where developers of all skill levels can collaborate and grow together.</p>
-    <div class = "signUp">
-        <a style="color:#F5F5DC" href="/signup"  >Sign Up</a>
-</div>
-    <div class="logIn">
-        <a href="/login" style="color:#F5F5DC">Login</a>
+    <h2>Where Developers Connect</h2>
+
+    <div class="features">
+        <div class="feature-item">
+            <span class="feature-icon">💬</span>
+            <h3>Real-time Messaging</h3>
+            <p>Connect instantly with developers worldwide through our streamlined chat platform.</p>
+        </div>
+
+        <div class="feature-item">
+            <span class="feature-icon">🤝</span>
+            <h3>Knowledge Sharing</h3>
+            <p>Share expertise, solve problems together, and learn from peers across the globe.</p>
+        </div>
+
+        <div class="feature-item">
+            <span class="feature-icon">👥</span>
+            <h3>Community Building</h3>
+            <p>Build meaningful professional relationships through both private and public discussions.</p>
+        </div>
+
+        <div class="feature-item">
+            <span class="feature-icon">🚀</span>
+            <h3>All Skill Levels</h3>
+            <p>Whether you're a beginner or expert, find your place to collaborate and grow together.</p>
+        </div>
+    </div>
+
+    <div class="cta-buttons">
+        <div class="signUp">
+            <a href="/signup">Sign Up</a>
+        </div>
+        <div class="logIn">
+            <a href="/login">Login</a>
+        </div>
     </div>
 </div>
 </body>
