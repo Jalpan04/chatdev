@@ -8,65 +8,89 @@
     <link rel="stylesheet" href="/static/css/login.css">
 </head>
 <body>
-<!-- Floating particles for dynamic background effect -->
-<div class="particle"></div>
-<div class="particle"></div>
-<div class="particle"></div>
-<div class="particle"></div>
-<div class="particle"></div>
-
-<div class="login-container">
-    <h1>Welcome Back</h1>
-    <p class="subtitle">Log in to connect with developers worldwide</p>
-
-    <form action="/login" method="POST">
-        <div class="input-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" placeholder="Enter your username" required>
-        </div>
-
-        <div class="input-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" placeholder="Enter password" required>
-        </div>
-
-        <div class="forgot-password">
-            <a href="/forgot-password">Forgot password?</a>
-        </div>
-
-        <button type="submit">Log In</button>
-    </form>
-
-    <div class="signup-link">
-        Don't have an account? <a href="/signup">Sign Up</a>
+    <!-- Tech-inspired geometric background -->
+    <div class="tech-background">
+        <div class="grid"></div>
+        <div class="circuit"></div>
+        <div class="node"></div>
+        <div class="node"></div>
+        <div class="node"></div>
+        <div class="node"></div>
     </div>
-</div>
 
-<script>
-    // Form validation
-    const form = document.querySelector('form');
-    form.addEventListener('submit', function (event) {
-        const username = form.username.value;
-        const password = form.password.value;
-        if (!username.trim() || !password.trim()) {
-            event.preventDefault();
-            alert('Please enter a valid username and password');
-        }
-    });
+    <div class="login-container">
+        <h1>Welcome Back</h1>
+        <p class="subtitle">Log in to connect with developers worldwide</p>
 
-    // Add focus and blur event listeners for input animation
-    const inputs = document.querySelectorAll('input');
-    inputs.forEach(input => {
-        input.addEventListener('focus', function () {
-            this.parentElement.classList.add('focused');
+        <form action="/login" method="POST" id="loginForm">
+            <div class="input-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <div class="forgot-password">
+                <a href="/forgot-password">Forgot password?</a>
+            </div>
+
+            <button type="submit">Log In</button>
+        </form>
+
+        <div class="signup-link">
+            Don't have an account? <a href="/signup">Sign Up</a>
+        </div>
+    </div>
+
+    <script>
+        // Form validation and input animations
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('loginForm');
+            const inputs = document.querySelectorAll('input');
+
+            // Form validation
+            form.addEventListener('submit', function(event) {
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+
+                if (!username.trim() || !password.trim()) {
+                    event.preventDefault();
+                    alert('Please enter a valid username and password');
+                }
+            });
+
+            // Input animations
+            inputs.forEach(input => {
+                // Initial state check (for browser autofill support)
+                if (input.value) {
+                    input.parentElement.classList.add('focused');
+                }
+
+                // Focus event
+                input.addEventListener('focus', function() {
+                    this.parentElement.classList.add('focused');
+                });
+
+                // Blur event
+                input.addEventListener('blur', function() {
+                    if (!this.value) {
+                        this.parentElement.classList.remove('focused');
+                    }
+                });
+            });
+
+            // Check for autofilled inputs after a short delay
+            setTimeout(() => {
+                inputs.forEach(input => {
+                    if (input.value) {
+                        input.parentElement.classList.add('focused');
+                    }
+                });
+            }, 100);
         });
-
-        input.addEventListener('blur', function () {
-            if (!this.value) {
-                this.parentElement.classList.remove('focused');
-            }
-        });
-    });
-</script>
+    </script>
 </body>
 </html>
