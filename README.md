@@ -1,5 +1,7 @@
 # ChatDev
 
+![GitHub top language](https://img.shields.io/github/languages/top/Jalpan04/chatdev) ![GitHub repo size](https://img.shields.io/github/repo-size/Jalpan04/chatdev) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A real-time instant chat service built using Flask, Flask-SocketIO, and MongoDB, featuring direct messaging, voice notes, chunked file uploads, and an integrated inline Python code compiler.
 
 ## Features
